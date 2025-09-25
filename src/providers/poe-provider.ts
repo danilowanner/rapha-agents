@@ -1,28 +1,31 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 type ModelId =
-  | "Assistant"
-  | "App-Creator"
   | "GPT-5-Chat"
-  | "GPT-5"
+  | "GPT-5" // ✅ tool calling
   | "GPT-5-mini"
   | "GPT-5-nano"
+  | "GPT-5-Codex" // ✅ tool calling
   | "GPT-4o"
   | "GPT-4o-Mini"
+  | "o3-pro"
+  | "o4-mini"
   | "Gemini-2.5-Flash-Image"
-  | "Gemini-2.5-Flash"
+  | "Gemini-2.5-Flash" // ❌ tool calling
   | "Gemini-2.5-Flash-Lite"
   | "Gemini-2.5-Pro"
   | "Gemini-2.5-Mini"
-  | "Claude-Sonnet-4"
-  | "Claude-Opus-4.1"
-  | "Grok-4-Fast-Reasoning"
-  | "Grok-4-Fast-Non-Reasoning"
-  | "Grok-4"
-  | "o3-pro"
-  | "Seedream-4.0"
-  | "Web-Search"
-  | "FLUX-schnell";
+  | "Claude-Sonnet-4" // ✅ tool calling
+  | "Claude-Sonnet-4-Reasoning"
+  | "Claude-Opus-4.1" // ✅ tool calling
+  | "Grok-4-Fast-Reasoning" // ❌ tool calling
+  | "Grok-4-Fast-Non-Reasoning" // ❌ tool calling
+  | "Grok-Code-Fast-1" // ❌ tool calling
+  | "Grok-4" // ❌ tool calling
+  | "Kimi-K2" // ❌ tool calling
+  | "Seedream-4.0" // Image
+  | "FLUX-schnell" // Image
+  | "DeepSeek-R1"; // ❌ tool calling
 
 export function createPoeAdapter(options: { apiKey: string }) {
   return createOpenAICompatible<ModelId, string, string, string>({
