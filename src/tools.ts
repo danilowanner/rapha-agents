@@ -1,10 +1,140 @@
 import { tool } from "ai";
 import z from "zod";
-import { db, listing, task } from "./db.ts";
+import { db } from "./db.ts";
 import { browser } from "./mcp.ts";
+import { listing } from "./schemas/listing.ts";
+import { task } from "./schemas/task.ts";
 import { extractText } from "./utils/extractText.ts";
+import { getJsonSnapshot } from "./utils/getSnapshot.ts";
 
-export const addListingsTool = tool({
+const browserNavigate = tool({
+  description: "Navigate to a URL and get a snapshot of the page.",
+  inputSchema: z.object({
+    url: z.string().describe("The URL to navigate to"),
+  }),
+  execute: async ({ url }) => browser.navigate(url),
+});
+
+const browserGoBack = tool({
+  description: "Go back to the previous page",
+  inputSchema: z.object({}),
+  execute: async () => browser.goBack(),
+});
+
+const browserGoForward = tool({
+  description: "Go forward to the next page",
+  inputSchema: z.object({}),
+  execute: async () => browser.goForward(),
+});
+
+const browserSnapshot = tool({
+  description:
+    "Capture accessibility snapshot of the current page. Use this for getting references to elements to interact with.",
+  inputSchema: z.object({}),
+  execute: async () => browser.snapshot(),
+});
+
+const browserClick = tool({
+  description: "Perform click on a web page",
+  inputSchema: z.object({
+    element: z
+      .string()
+      .describe("Human-readable element description used to obtain permission to interact with the element"),
+    ref: z.string().describe("Exact target element reference from the page snapshot"),
+  }),
+  execute: async ({ element, ref }) => browser.click(element, ref),
+});
+
+const browserHover = tool({
+  description: "Hover over element on page",
+  inputSchema: z.object({
+    element: z
+      .string()
+      .describe("Human-readable element description used to obtain permission to interact with the element"),
+    ref: z.string().describe("Exact target element reference from the page snapshot"),
+  }),
+  execute: async ({ element, ref }) => browser.hover(element, ref),
+});
+
+const browserType = tool({
+  description: "Type text into editable element",
+  inputSchema: z.object({
+    element: z
+      .string()
+      .describe("Human-readable element description used to obtain permission to interact with the element"),
+    ref: z.string().describe("Exact target element reference from the page snapshot"),
+    text: z.string().describe("Text to type into the element"),
+    submit: z.boolean().describe("Whether to submit entered text (press Enter after)"),
+  }),
+  execute: async ({ element, ref, text, submit }) => browser.type(element, ref, text, submit),
+});
+
+const browserSelectOption = tool({
+  description: "Select an option in a dropdown",
+  inputSchema: z.object({
+    element: z
+      .string()
+      .describe("Human-readable element description used to obtain permission to interact with the element"),
+    ref: z.string().describe("Exact target element reference from the page snapshot"),
+    values: z
+      .array(z.string())
+      .describe("Array of values to select in the dropdown. This can be a single value or multiple values."),
+  }),
+  execute: async ({ element, ref, values }) => browser.selectOption(element, ref, values),
+});
+
+const browserPressKey = tool({
+  description: "Press a key on the keyboard",
+  inputSchema: z.object({
+    key: z.string().describe("Name of the key to press or a character to generate, such as `ArrowLeft` or `a`"),
+  }),
+  execute: async ({ key }) => browser.pressKey(key),
+});
+
+const browserWait = tool({
+  description: "Wait for a specified time in seconds",
+  inputSchema: z.object({
+    time: z.number().describe("The time to wait in seconds"),
+  }),
+  execute: async ({ time }) => browser.wait(time),
+});
+
+const browserGetConsoleLogs = tool({
+  description: "Get the console logs from the browser",
+  inputSchema: z.object({}),
+  execute: async () => browser.getConsoleLogs(),
+});
+
+const browserScreenshot = tool({
+  description: "Take a screenshot of the current page",
+  inputSchema: z.object({}),
+  execute: async () => browser.screenshot(),
+});
+
+const browserGetPageText = tool({
+  description:
+    "Returns the text content of the main element of a webpage. This is the preferred tool to extract page contents.",
+  inputSchema: z.object({
+    url: z.string().url().describe("The URL of the webpage to extract text from."),
+  }),
+  execute: async ({ url }) => {
+    try {
+      const result = getJsonSnapshot(await browser.navigate(url));
+      const mainElement = result.find((element) => {
+        if (typeof element === "object" && element !== null) {
+          const key = Object.keys(element)[0];
+          return key.startsWith("main");
+        }
+        return false;
+      });
+      return { success: true, text: extractText(Object.values(mainElement ?? {})[0]) } as const;
+    } catch (err) {
+      return { success: false, error: String(err) } as const;
+    }
+  },
+});
+
+const dbAddListings = tool({
   description: "Add new listings to database. Does not modify existing listings.",
   inputSchema: z.object({
     listings: z.array(listing),
@@ -19,7 +149,7 @@ export const addListingsTool = tool({
   },
 });
 
-export const addTasksTool = tool({
+const dbAddTasks = tool({
   description: "Add tasks to the task list. They will be executed asap.",
   inputSchema: z.object({
     tasks: z.array(task),
@@ -34,27 +164,22 @@ export const addTasksTool = tool({
   },
 });
 
-export const getPageTextTool = tool({
-  description:
-    "Returns the text content of the main element of a webpage. This is the preferred tool to extract page contents.",
-  inputSchema: z.object({
-    url: z.string().url().describe("The URL of the webpage to extract text from."),
-  }),
-  execute: async ({ url }) => {
-    try {
-      await browser.navigate(url);
-      await browser.wait(2);
-      const result = await browser.snapshotJson();
-      const mainElement = result.find((element) => {
-        if (typeof element === "object" && element !== null) {
-          const key = Object.keys(element)[0];
-          return key.startsWith("main");
-        }
-        return false;
-      });
-      return { success: true, text: extractText(Object.values(mainElement ?? {})[0]) } as const;
-    } catch (err) {
-      return { success: false, error: String(err) } as const;
-    }
-  },
-});
+export const tools = {
+  dbAddListings,
+  dbAddTasks,
+  browserGetPageText,
+  browserNavigate,
+  browserGoBack,
+  browserGoForward,
+  browserSnapshot,
+  browserClick,
+  browserHover,
+  browserType,
+  browserSelectOption,
+  browserPressKey,
+  browserWait,
+  browserGetConsoleLogs,
+  browserScreenshot,
+};
+
+export type ToolName = keyof typeof tools;

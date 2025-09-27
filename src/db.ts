@@ -1,32 +1,47 @@
 import { JSONFilePreset } from "lowdb/node";
-import z from "zod";
+
+import type { Listing } from "./schemas/listing.ts";
+import type { Message } from "./schemas/message.ts";
+import type { Task } from "./schemas/task.ts";
+import { getScheduleDelayMs } from "./utils/getScheduleDelayMs.ts";
 
 type Data = {
-  listings: Listing[];
-  tasks: Task[];
+  listings: DBListing[];
+  tasks: DBTask[];
+  agentLog: DBMessage[];
 };
 
-export const listing = z.object({
-  title: z.string().describe("The title of the listing."),
-  description: z.string().describe("The description of the listing."),
-  price: z.number().describe("The price of the listing in HKD."),
-});
+export type DBListing = Listing;
+export type DBTask = Task & { scheduledTimestamp: number };
+export type DBMessage = Message & { createdTimestamp: number };
 
-export const task = z.object({
-  url: z.string().describe("The URL of the page to perform the task on."),
-  task: z.string().describe("The instructions of the task."),
-});
-
-export type Task = z.infer<typeof task>;
-
-export type Listing = z.infer<typeof listing>;
-
-const defaultData: Data = { listings: [], tasks: [] };
+const defaultData: Data = { listings: [], tasks: [], agentLog: [] };
 const fileDB = await JSONFilePreset<Data>("db.json", defaultData);
 
 export const db = {
   getListings: () => fileDB.data.listings,
-  addListings: async (newListings: Listing[]) => fileDB.update(({ listings }) => listings.push(...newListings)),
+  addListings: async (newListings: Listing[]) =>
+    fileDB.update(({ listings }) => listings.push(...newListings.map(getDbListing))),
   getTasks: () => fileDB.data.tasks,
-  addTasks: async (newTasks: Task[]) => fileDB.update(({ tasks }) => tasks.push(...newTasks)),
+  addTasks: async (newTasks: Task[]) => fileDB.update(({ tasks }) => tasks.push(...newTasks.map(getDbTask))),
+  removeTask: async (task: DBTask) =>
+    fileDB.update(({ tasks }) => {
+      const idx = tasks.indexOf(task);
+      if (idx > -1) tasks.splice(idx, 1);
+    }),
+  getAgentLog: () => fileDB.data.agentLog,
+  addAgentLog: async (message: string) => fileDB.update(({ agentLog }) => agentLog.push(getDbMessage({ message }))),
 };
+
+function getDbListing(listing: Listing): DBListing {
+  return { ...listing };
+}
+
+function getDbTask(task: Task): DBTask {
+  const { scheduleExecutionIn } = task;
+  return { ...task, scheduledTimestamp: Date.now() + getScheduleDelayMs(scheduleExecutionIn) };
+}
+
+function getDbMessage(message: Message): DBMessage {
+  return { ...message, createdTimestamp: Date.now() };
+}

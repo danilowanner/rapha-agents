@@ -1,14 +1,14 @@
 import { logger } from "../log.ts";
 import { browser } from "../mcp.ts";
 import { findElement } from "./findElement.ts";
+import { getJsonSnapshot } from "./getSnapshot.ts";
 
 const log = logger("GET-UNREAD");
 
 export const getUnreadMessages = async () => {
   try {
-    await browser.navigate("https://www.carousell.com.hk/inbox/received/");
-    await browser.wait(2);
-    const snapshot = await browser.snapshotJson();
+    const navResult = await browser.navigate("https://www.carousell.com.hk/inbox/received/");
+    const snapshot = getJsonSnapshot(navResult);
     const mainElement = snapshot.find((element) => {
       if (typeof element === "object" && element !== null) {
         const key = Object.keys(element)[0];

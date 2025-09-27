@@ -1,23 +1,28 @@
+import { agent } from "./agent.ts";
+import { db } from "./db.ts";
 import { logger } from "./log.ts";
 
 const log = logger("SCHEDULER");
 
-const pollingIntervalMs = 60_000; // 1 minute
 let timer: NodeJS.Timeout | undefined = undefined;
-const tasks: Array<Task> = [];
 
-type Task = {
-  schedule: "startup" | "every minute" | "every 5 minutes" | "hourly";
+type SystemTask = {
+  name: string;
+  scheduledTimestamp: number;
   action: () => Promise<void>;
 };
 
-// @todo Make sure the scheduler does not run multiple tasks concurrently
+const taskQueue = new Set<SystemTask>();
+let processing = false;
 
-export function start(newTasks: Array<Task>) {
-  tasks.push(...newTasks);
-  tasks.filter((t) => t.schedule === "startup").forEach((t) => t.action().catch((e) => log.error(e)));
+export function start() {
   if (timer) return;
-  timer = setInterval(() => loop().catch((e) => console.error(e)), pollingIntervalMs);
+  timer = setInterval(() => processQueue().catch((e) => console.error(e)), 1_000);
+  log.info("Scheduler started");
+}
+
+export function addSystemTask(task: SystemTask) {
+  taskQueue.add(task);
 }
 
 export function stop() {
@@ -25,30 +30,37 @@ export function stop() {
   timer = undefined;
 }
 
-async function loop() {
+async function processQueue() {
+  if (processing) return;
+  processing = true;
   try {
-    const now = new Date();
-    for (const task of tasks) {
-      switch (task.schedule) {
-        case "every minute":
-          log.info("Running task...");
-          await task.action();
-          break;
-        case "every 5 minutes":
-          if (now.getMinutes() % 5 === 0) {
-            log.info("Running 5 minute task...");
-            await task.action();
-          }
-          break;
-        case "hourly":
-          if (now.getMinutes() === 0) {
-            log.info("Running 'hourly' task...");
-            await task.action();
-          }
-          break;
-      }
+    const now = Date.now();
+    const combined = [
+      ...[...taskQueue].map((t) => ({ source: "system" as const, task: t })),
+      ...db.getTasks().map((t) => ({ source: "db" as const, task: t })),
+    ];
+
+    const due = combined.filter((c) => c.task.scheduledTimestamp <= now);
+    if (due.length === 0) return;
+
+    due.sort((a, b) => a.task.scheduledTimestamp - b.task.scheduledTimestamp);
+    const next = due[0];
+
+    if (next.source === "system") {
+      taskQueue.delete(next.task);
+      log.info(`Running scheduled system task: ${next.task.name}`);
+      await next.task.action();
+      log.info(`Completed task: ${next.task.name}`);
+    } else {
+      log.info("Running scheduled DB task:");
+      log.info(next.task.task);
+      await agent.handleTask(next.task);
+      await db.removeTask(next.task);
+      log.info("Completed DB task.");
     }
   } catch (e) {
-    log.error("Loop error:", e);
+    log.error("Task error:", e);
+  } finally {
+    processing = false;
   }
 }
