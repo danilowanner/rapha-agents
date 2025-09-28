@@ -1,9 +1,12 @@
 import { JSONFilePreset } from "lowdb/node";
 
+import { agent } from "./agent.ts";
 import type { Listing } from "./schemas/listing.ts";
 import type { Message } from "./schemas/message.ts";
+import type { ScheduleExecutionIn } from "./schemas/scheduleExecutionIn.ts";
 import type { Task } from "./schemas/task.ts";
 import { getScheduleDelayMs } from "./utils/getScheduleDelayMs.ts";
+import { scheduleSystemTask } from "./utils/scheduleSystemTask.ts";
 
 type Data = {
   listings: DBListing[];
@@ -23,7 +26,11 @@ export const db = {
   addListings: async (newListings: Listing[]) =>
     fileDB.update(({ listings }) => listings.push(...newListings.map(getDbListing))),
   getTasks: () => fileDB.data.tasks,
-  addTasks: async (newTasks: Task[]) => fileDB.update(({ tasks }) => tasks.push(...newTasks.map(getDbTask))),
+  addTasks: async (newTasks: Task[]) =>
+    fileDB.update(({ tasks }) => {
+      tasks.push(...newTasks.map(getDbTask));
+      if (newTasks.length > 0) enqueuePruneTasks({ minutes: 0 });
+    }),
   removeTask: async (task: DBTask) =>
     fileDB.update(({ tasks }) => {
       const idx = tasks.indexOf(task);
@@ -44,4 +51,14 @@ function getDbTask(task: Task): DBTask {
 
 function getDbMessage(message: Message): DBMessage {
   return { ...message, createdTimestamp: Date.now() };
+}
+
+function enqueuePruneTasks(scheduleExecutionIn: ScheduleExecutionIn) {
+  scheduleSystemTask({
+    name: "Prune tasks",
+    action: async () => {
+      await agent.pruneTasks();
+    },
+    scheduleExecutionIn,
+  });
 }

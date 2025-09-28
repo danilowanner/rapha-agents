@@ -22,7 +22,7 @@ export const getUnreadMessages = async () => {
 
     return count;
   } catch (err) {
-    log.error("Could not get unread message count.", err);
-    return 0;
+    log.error("Could not get unread message count.");
+    throw err;
   }
 };

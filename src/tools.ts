@@ -150,7 +150,8 @@ const dbAddListings = tool({
 });
 
 const dbAddTasks = tool({
-  description: "Add tasks to the task list. They will be executed asap.",
+  description:
+    "Add tasks to the task list to be executed. Obsolete/old tasks are pruned automatically after adding, so you don't need to schedule any pruning yourself.",
   inputSchema: z.object({
     tasks: z.array(task),
   }),
@@ -164,9 +165,29 @@ const dbAddTasks = tool({
   },
 });
 
+const removeTaskByScheduledTime = tool({
+  description: "Remove a scheduled DB task by its exact scheduledTimestamp (ms since epoch).",
+  inputSchema: z.object({
+    scheduledTimestamp: z
+      .number()
+      .describe("Exact scheduledTimestamp (milliseconds since epoch) of the task to remove."),
+  }),
+  execute: async ({ scheduledTimestamp }) => {
+    try {
+      const taskToRemove = db.getTasks().find((t) => t.scheduledTimestamp === scheduledTimestamp);
+      if (!taskToRemove) return { success: false, error: "Task not found" } as const;
+      await db.removeTask(taskToRemove);
+      return { success: true } as const;
+    } catch (err) {
+      return { success: false, error: String(err) } as const;
+    }
+  },
+});
+
 export const tools = {
   dbAddListings,
   dbAddTasks,
+  removeTaskByScheduledTime,
   browserGetPageText,
   browserNavigate,
   browserGoBack,

@@ -19,6 +19,8 @@ Do not use index files to re-export modules.
 
 Do not add comments unless absolutely necessary for clarity, prefer self-documenting code.
 
+When exporting a function, prefer named exports over default exports. Add a JSDoc with a brief description of the function's purpose.
+
 ## Testing
 
 This is a proof of concept project, so do not add tests or testing frameworks.

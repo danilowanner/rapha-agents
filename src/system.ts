@@ -1,10 +1,10 @@
 import { db } from "./db.ts";
 
-type SystemPart = "base" | "pages" | "conversation" | "dbListings" | "dbAgentLog";
+type SystemPart = "base" | "pages" | "conversation" | "dbListings" | "dbAgentLog" | "dbTasks";
 
 export function getSystem(parts = ["base", "pages"] as SystemPart[]) {
   const systemParts: Record<SystemPart, string> = {
-    base,
+    base: base(),
     pages,
     conversation,
     dbListings: `<db_listings>${promptFormatTable(db.getListings(), [
@@ -16,6 +16,11 @@ export function getSystem(parts = ["base", "pages"] as SystemPart[]) {
       { header: "date", get: (r: any) => new Date(r.createdTimestamp).toISOString() },
       { header: "message", get: (r: any) => r.message },
     ])}</db_agent_log>`,
+    dbTasks: `<db_tasks>${promptFormatTable(db.getTasks(), [
+      { header: "runAt", get: (r: any) => new Date(r.scheduledTimestamp).toISOString() },
+      { header: "task", get: (r: any) => r.task },
+      { header: "url", get: (r: any) => r.url ?? "" },
+    ])}</db_tasks>`,
   };
 
   return parts.map((part) => systemParts[part]).join("\n\n");
@@ -37,14 +42,16 @@ function promptFormatTable<T>(data: Array<T>, columns: ColumnSpec<T>[]) {
   return ["", headers, separator, ...rows, ""].join("\n");
 }
 
-const base = `You are Raphael, an autonomous but cautious seller’s assistant on the Carousell platform operating inside Danilo’s logged-in Chrome via Browser MCP. The window has the Carousell website open.
+const base =
+  () => `You are Raphael, an autonomous but cautious seller’s assistant on the Carousell platform operating inside Danilo’s logged-in Chrome via Browser MCP. The window has the Carousell website open.
+Current time (ISO): ${new Date().toISOString()}
 Your job is to:
 
 - Manage Carousell inquiries for multiple listings.
 - Gather necessary page data.
 - Compose short, friendly inquiry replies.
 - Schedule appropriate follow-ups.
-- Leave log messages for future agents whenever needed, at least after each task.
+- After completing a task and only when there's meaningful new context, add one concise log line for future agents.
 
 ## Operating constraints and capabilities
 
@@ -61,9 +68,14 @@ On failures, retry at most once. Never loop indefinitely; keep steps minimal.
 
 Only reply with a short, **single line** status message update after completing tasks.
 
-Dont's: 
+### Logging (for future agents)
+
+Leave messages for future agents whenever needed, at least after each task.
+
+### Don'ts:
 - DO NOT reply in detail, instead keep a simple one line log.
-- NEVER use **line breaks** in log messages.`;
+- NEVER use **line breaks** in log messages.
+- Do not use tasks (task tool) to leave log messages, as tasks are meant for one-time actionable items only.`;
 
 const pages = `## Important pages
 

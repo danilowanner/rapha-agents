@@ -1,6 +1,7 @@
 import { agent } from "./agent.ts";
 import { db } from "./db.ts";
 import { logger } from "./log.ts";
+import { createBackoff } from "./utils/createBackoff.ts";
 
 const log = logger("SCHEDULER");
 
@@ -10,6 +11,11 @@ type SystemTask = {
   name: string;
   scheduledTimestamp: number;
   action: () => Promise<void>;
+  retry?: {
+    remaining: number;
+    attempt: number;
+    backoffMinutes: number;
+  };
 };
 
 const taskQueue = new Set<SystemTask>();
@@ -49,8 +55,12 @@ async function processQueue() {
     if (next.source === "system") {
       taskQueue.delete(next.task);
       log.info(`Running scheduled system task: ${next.task.name}`);
-      await next.task.action();
-      log.info(`Completed task: ${next.task.name}`);
+      try {
+        await next.task.action();
+        log.info(`Completed task: ${next.task.name}`);
+      } catch (err) {
+        handleSystemTaskFailure(next.task, err);
+      }
     } else {
       log.info("Running scheduled DB task:");
       log.info(next.task.task);
@@ -63,4 +73,24 @@ async function processQueue() {
   } finally {
     processing = false;
   }
+}
+
+function handleSystemTaskFailure(task: SystemTask, err: unknown) {
+  log.error(`System task failed: ${task.name}`, err);
+  if (!task.retry || task.retry.remaining <= 0) return;
+  const r = task.retry;
+  const backoff = createBackoff({ initial: r.backoffMinutes, max: 60, factor: 3 });
+  const nextDelay = backoff.current; // minutes for this retry
+  const scheduledTimestamp = Date.now() + nextDelay * 60_000;
+  taskQueue.add({
+    name: `${task.name} (retry ${r.attempt})`,
+    action: task.action,
+    scheduledTimestamp,
+    retry: {
+      remaining: r.remaining - 1,
+      attempt: r.attempt + 1,
+      backoffMinutes: backoff.increase(),
+    },
+  });
+  log.info(`Re-scheduled ${task.name} (retry ${r.attempt}) in ${nextDelay}m (remaining retries: ${r.remaining - 1})`);
 }

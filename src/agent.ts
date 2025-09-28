@@ -21,6 +21,7 @@ export const agent = {
   updateListings,
   checkMessages,
   handleTask,
+  pruneTasks,
 };
 
 async function checkMessages() {
@@ -55,13 +56,25 @@ async function handleTask(details: Task) {
     const snapshot = await browser
       .navigate(details.url)
       .then((res) => getFirstToolMessage(res))
-      .catch(() => "Could not load page");
-    page = `\nYou have been navigated to the following page:\n${snapshot}`;
+      .catch(() => `Could not load page: ${details.url}`);
+    page = `\nYou have been navigated to the following page, where you should complete the task:\n${snapshot}`;
   }
   return await task({
     prompt: `Handle this pending task:\n${details.task}${page}`,
     system: getSystem(["base", "pages", "dbListings", "dbAgentLog", "conversation"]),
     toolNames: [...browserBasics, ...browserInteractions, "dbAddTasks"],
+  });
+}
+
+async function pruneTasks() {
+  return await task({
+    prompt: `Review the scheduled tasks shown in <db_tasks>.
+    For tasks with the same purpose (for the same chat URL / user), keep ONLY the one with the LATEST runAt time; remove earlier duplicates using removeTaskByScheduledTime.
+    We want to avoid keeping earlier follow-ups so as not to spam users.
+    Reply with a concise one-line log describing what you kept/removed.`,
+    system: getSystem(["base", "dbTasks", "dbAgentLog"]),
+    toolNames: ["removeTaskByScheduledTime"],
+    stepLimit: 8,
   });
 }
 
@@ -89,13 +102,20 @@ async function task(task: TaskProps) {
       system,
       onStepFinish: (step) => {
         step.content.forEach((msg) => {
-          if (msg.type === "tool-call") log.stepUsage(msg.toolName, step.usage.totalTokens);
-          if (["reasoning", "text"].includes(msg.type)) log.stepUsage(msg.type, step.usage.totalTokens);
+          if (msg.type === "tool-call") {
+            log.stepUsage(msg.toolName, step.usage.totalTokens);
+          } else if (msg.type === "text") {
+            if (msg.text.trim()) log.stepUsage(msg.text.trim(), step.usage.totalTokens);
+          } else if (msg.type === "reasoning") {
+            log.stepUsage(msg.type, step.usage.totalTokens);
+          }
         });
       },
     });
-    log.info(data.text);
-    await db.addAgentLog(data.text);
+    if (data.text) {
+      log.info(data.text);
+      await db.addAgentLog(data.text);
+    }
     log.taskComplete(data.totalUsage.totalTokens);
   } catch (err) {
     log.error("LLM task failed:", err);
