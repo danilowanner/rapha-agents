@@ -3,16 +3,38 @@ import z from "zod";
 import { db } from "./db.ts";
 import { browser } from "./mcp.ts";
 import { listing } from "./schemas/listing.ts";
+import { reasoning } from "./schemas/reasoning.ts";
 import { task } from "./schemas/task.ts";
-import { extractText } from "./utils/extractText.ts";
-import { getJsonSnapshot } from "./utils/getSnapshot.ts";
+import { getFirstToolMessage } from "./utils/getFirstToolMessage.ts";
+import { getPageText } from "./utils/getPageText.ts";
+import { getPageTitle } from "./utils/getPageTitle.ts";
+import { runNotifyShortcut } from "./utils/notify.ts";
 
 const browserNavigate = tool({
-  description: "Navigate to a URL and get a snapshot of the page.",
+  description: "Navigate to a URL and get content of the page.",
   inputSchema: z.object({
-    url: z.string().describe("The URL to navigate to"),
+    url: z.string().describe("The URL to navigate to and retrieve content from."),
+    returnContent: z
+      .enum(["title", "text", "snapshot"])
+      .describe("What to return: page title, main text content, or full accessibility snapshot"),
   }),
-  execute: async ({ url }) => browser.navigate(url),
+  execute: async ({ url, returnContent }) => {
+    try {
+      const result = await browser.navigate(url);
+      switch (returnContent) {
+        case "title":
+          return { success: true, content: getPageTitle(result) } as const;
+        case "snapshot":
+          return { success: true, content: getFirstToolMessage(result) } as const;
+        case "text":
+          return { success: true, content: getPageText(result) } as const;
+        default:
+          throw new Error("Invalid returnContent input value.");
+      }
+    } catch (err) {
+      return { success: false, error: String(err) } as const;
+    }
+  },
 });
 
 const browserGoBack = tool({
@@ -111,23 +133,16 @@ const browserScreenshot = tool({
   execute: async () => browser.screenshot(),
 });
 
-const browserGetPageText = tool({
+const notifyDanilo = tool({
   description:
-    "Returns the text content of the main element of a webpage. This is the preferred tool to extract page contents.",
+    "Send a notification to Danilo. Use to surface important events, questions or reminders. Do not send trivial updates.",
   inputSchema: z.object({
-    url: z.string().url().describe("The URL of the webpage to extract text from."),
+    message: z.string().max(600).describe("Notification text to deliver (max 600 characters)"),
   }),
-  execute: async ({ url }) => {
+  execute: async ({ message }) => {
     try {
-      const result = getJsonSnapshot(await browser.navigate(url));
-      const mainElement = result.find((element) => {
-        if (typeof element === "object" && element !== null) {
-          const key = Object.keys(element)[0];
-          return key.startsWith("main");
-        }
-        return false;
-      });
-      return { success: true, text: extractText(Object.values(mainElement ?? {})[0]) } as const;
+      await runNotifyShortcut(message);
+      return { success: true } as const;
     } catch (err) {
       return { success: false, error: String(err) } as const;
     }
@@ -165,7 +180,7 @@ const dbAddTasks = tool({
   },
 });
 
-const removeTaskByScheduledTime = tool({
+const dbRemoveTaskByScheduledTime = tool({
   description: "Remove a scheduled DB task by its exact scheduledTimestamp (ms since epoch).",
   inputSchema: z.object({
     scheduledTimestamp: z
@@ -184,11 +199,25 @@ const removeTaskByScheduledTime = tool({
   },
 });
 
+const addAReasoningStep = tool({
+  description: `Add a step to the reasoning process. Use BEFORE other tools to outline approach.
+  Use tool for updates when significant changes occur or if unlclear about next steps. NEVER duplicate prior reasoning.`,
+  inputSchema: reasoning,
+  execute: async ({ title, details }) => {
+    try {
+      await db.addReasoningLog({ title, details });
+      return { success: true } as const;
+    } catch (err) {
+      return { success: false, error: String(err) } as const;
+    }
+  },
+});
+
 export const tools = {
   dbAddListings,
   dbAddTasks,
-  removeTaskByScheduledTime,
-  browserGetPageText,
+  dbRemoveTaskByScheduledTime,
+  addAReasoningStep,
   browserNavigate,
   browserGoBack,
   browserGoForward,
@@ -201,6 +230,7 @@ export const tools = {
   browserWait,
   browserGetConsoleLogs,
   browserScreenshot,
+  notifyDanilo,
 };
 
 export type ToolName = keyof typeof tools;

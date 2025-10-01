@@ -1,13 +1,24 @@
 import chalk from "chalk";
+import { runNotifyShortcut } from "./utils/notify.ts";
 
 type Component = "AGENT" | (string & {});
 
 export const logger = (component: Component) => ({
-  error: (msg: string, ...args: any[]) => {
-    console.error(`${c(component)} ${chalk.red(msg)}`, ...args);
+  error: (msg: string, error?: unknown) => {
+    console.error(`${c(component)} ${chalk.red(msg)}`, error);
+    runNotifyShortcut("Error: " + msg + (error instanceof Error ? `: ${error.message}` : ""));
   },
   info: (msg: string, ...args: any[]) => {
     console.log(`${c(component)} ${msg}`, ...args);
+  },
+  debug: (msg: string) => {
+    const lines = msg
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l);
+    lines
+      .map((l, i) => `${i === 0 ? c(component) : cSpace(component)} ${chalk.gray(l)}`)
+      .forEach((line) => console.log(line));
   },
   notice: (msg: string, ...args: any[]) => {
     console.log(`${c(component)} ${chalk.yellow(msg)}`, ...args);
@@ -26,4 +37,8 @@ export const logger = (component: Component) => ({
 
 function c(component: Component) {
   return component === "AGENT" ? chalk.blue(`[${component}]`) : chalk.gray(`[${component}]`);
+}
+
+function cSpace(component: Component) {
+  return " ".repeat(component.length + 2);
 }

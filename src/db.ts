@@ -3,6 +3,7 @@ import { JSONFilePreset } from "lowdb/node";
 import { agent } from "./agent.ts";
 import type { Listing } from "./schemas/listing.ts";
 import type { Message } from "./schemas/message.ts";
+import type { Reasoning } from "./schemas/reasoning.ts";
 import type { ScheduleExecutionIn } from "./schemas/scheduleExecutionIn.ts";
 import type { Task } from "./schemas/task.ts";
 import { getScheduleDelayMs } from "./utils/getScheduleDelayMs.ts";
@@ -12,13 +13,15 @@ type Data = {
   listings: DBListing[];
   tasks: DBTask[];
   agentLog: DBMessage[];
+  reasoningLog: DBReasoning[];
 };
 
 export type DBListing = Listing;
 export type DBTask = Task & { scheduledTimestamp: number };
 export type DBMessage = Message & { createdTimestamp: number };
+export type DBReasoning = Reasoning & { createdTimestamp: number };
 
-const defaultData: Data = { listings: [], tasks: [], agentLog: [] };
+const defaultData: Data = { listings: [], tasks: [], agentLog: [], reasoningLog: [] };
 const fileDB = await JSONFilePreset<Data>("db.json", defaultData);
 
 export const db = {
@@ -38,6 +41,9 @@ export const db = {
     }),
   getAgentLog: () => fileDB.data.agentLog,
   addAgentLog: async (message: string) => fileDB.update(({ agentLog }) => agentLog.push(getDbMessage({ message }))),
+  getReasoningLog: () => fileDB.data.reasoningLog,
+  addReasoningLog: async (reasoning: Reasoning) =>
+    fileDB.update(({ reasoningLog }) => reasoningLog.push(getDbReasoning(reasoning))),
 };
 
 function getDbListing(listing: Listing): DBListing {
@@ -51,6 +57,10 @@ function getDbTask(task: Task): DBTask {
 
 function getDbMessage(message: Message): DBMessage {
   return { ...message, createdTimestamp: Date.now() };
+}
+
+function getDbReasoning(reasoning: Reasoning): DBReasoning {
+  return { ...reasoning, createdTimestamp: Date.now() };
 }
 
 function enqueuePruneTasks(scheduleExecutionIn: ScheduleExecutionIn) {

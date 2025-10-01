@@ -1,7 +1,7 @@
 import { type ToolName } from "./tools.ts";
 
 // Core navigation & page discovery
-export const browserBasics: ToolName[] = ["browserNavigate", "browserGetPageText", "browserSnapshot", "browserWait"];
+export const browserBasics: ToolName[] = ["browserNavigate", "browserSnapshot", "browserWait"];
 
 // Element interaction primitives
 export const browserInteractions: ToolName[] = [
@@ -17,7 +17,3 @@ export const browserInspection: ToolName[] = ["browserGetConsoleLogs", "browserS
 
 // Data / persistence operations
 export const dataOps: ToolName[] = ["dbAddListings", "dbAddTasks"];
-
-export const allTools: ToolName[] = Array.from(
-  new Set([...browserBasics, ...browserInteractions, ...browserInspection, ...dataOps])
-);

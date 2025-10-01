@@ -10,6 +10,7 @@ import { getSystem } from "./system.ts";
 import { browserBasics, browserInteractions } from "./toolGroups.ts";
 import { tools, type ToolName } from "./tools.ts";
 import { getFirstToolMessage } from "./utils/getFirstToolMessage.ts";
+import { runNotifyShortcut } from "./utils/notify.ts";
 
 const log = logger("AGENT");
 
@@ -22,13 +23,14 @@ export const agent = {
   checkMessages,
   handleTask,
   pruneTasks,
+  testTools,
 };
 
 async function checkMessages() {
   return await task({
     prompt:
       "Check if there are any new (unread) messages. Add tasks to read and handle them using the addTasks tool. No action needed if no new messages.",
-    toolNames: [...browserBasics, ...browserInteractions, "browserGetPageText", "dbAddTasks"],
+    toolNames: [...browserBasics, ...browserInteractions, "dbAddTasks", "notifyDanilo"],
   });
 }
 
@@ -38,7 +40,7 @@ async function updateListings() {
       "Get my latest listings, find any new listings which are NOT yet in the database (by comparing title). Add new listings to the database using the addListings tool. Add details by extracting full description from listing page using getPageTextTool.",
     system: getSystem(["base", "pages", "dbListings"]),
     stepLimit: 20,
-    toolNames: [...browserBasics, "browserClick", "dbAddListings"],
+    toolNames: [...browserBasics, "browserClick", "dbAddListings", "notifyDanilo"],
   });
 }
 
@@ -53,16 +55,14 @@ async function getListings() {
 async function handleTask(details: Task) {
   let page = "";
   if (details.url) {
-    const snapshot = await browser
-      .navigate(details.url)
-      .then((res) => getFirstToolMessage(res))
-      .catch(() => `Could not load page: ${details.url}`);
-    page = `\nYou have been navigated to the following page, where you should complete the task:\n${snapshot}`;
+    const snapshot = await browser.navigate(details.url).then((res) => getFirstToolMessage(res));
+    page = `\nYou have already been navigated to the following page, where you should complete the task:\n${snapshot}`;
   }
   return await task({
     prompt: `Handle this pending task:\n${details.task}${page}`,
     system: getSystem(["base", "pages", "dbListings", "dbAgentLog", "conversation"]),
-    toolNames: [...browserBasics, ...browserInteractions, "dbAddTasks"],
+    toolNames: ["dbAddTasks", "addAReasoningStep", ...browserBasics, ...browserInteractions, "notifyDanilo"],
+    stepLimit: 16,
   });
 }
 
@@ -73,8 +73,19 @@ async function pruneTasks() {
     We want to avoid keeping earlier follow-ups so as not to spam users.
     Reply with a concise one-line log describing what you kept/removed.`,
     system: getSystem(["base", "dbTasks", "dbAgentLog"]),
-    toolNames: ["removeTaskByScheduledTime"],
+    toolNames: ["dbRemoveTaskByScheduledTime", "notifyDanilo"],
     stepLimit: 8,
+  });
+}
+
+async function testTools() {
+  return await task({
+    prompt: `Schedule tasks to test the following tools: addAReasoningStep, dbAddTasks, notifyDanilo.}
+    For each tool, schedule a task to test it thoroughly and provide any feedback or notes.
+    You can schedule the tasks for now (0 minutes), they will be processed one by one.`,
+    system: getSystem(["base"]),
+    toolNames: ["dbAddTasks", "addAReasoningStep", "notifyDanilo"],
+    stepLimit: 16,
   });
 }
 
@@ -87,7 +98,7 @@ type TaskProps = {
 };
 
 async function task(task: TaskProps) {
-  const { prompt, stepLimit = 10, toolNames, system = getSystem(["base", "pages"]), model = "GPT-5-Codex" } = task;
+  const { prompt, stepLimit = 6, toolNames, system = getSystem(["base", "pages"]), model = "GPT-5-Codex" } = task;
   try {
     const selectedTools = toolNames.reduce((acc, name) => {
       acc[name] = tools[name];
@@ -104,6 +115,12 @@ async function task(task: TaskProps) {
         step.content.forEach((msg) => {
           if (msg.type === "tool-call") {
             log.stepUsage(msg.toolName, step.usage.totalTokens);
+            if (msg.toolName === "addAReasoningStep" && msg.input && typeof msg.input.title === "string") {
+              const title = msg.input.title.trim();
+              const details = msg.input.details?.trim();
+              log.info(title);
+              log.debug(details);
+            }
           } else if (msg.type === "text") {
             if (msg.text.trim()) log.stepUsage(msg.text.trim(), step.usage.totalTokens);
           } else if (msg.type === "reasoning") {
@@ -114,6 +131,7 @@ async function task(task: TaskProps) {
     });
     if (data.text) {
       log.info(data.text);
+      await runNotifyShortcut(data.text);
       await db.addAgentLog(data.text);
     }
     log.taskComplete(data.totalUsage.totalTokens);

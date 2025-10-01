@@ -13,8 +13,10 @@ process.on("uncaughtException", async (err) => shutdown(ShutdownReason.UNCAUGHT_
 process.on("unhandledRejection", async (reason) => shutdown(ShutdownReason.UNHANDLED_REJECTION, reason));
 
 start();
-//enqueueUpdateListing({ minutes: 0 });
+
 enqueueCheckMessages({ minutes: 0 });
+//enqueueToolTest({ minutes: 0 });
+//enqueueUpdateListing({ minutes: 0 });
 
 const checkMessagesBackoff = createBackoff({ initial: 1, max: 60 });
 
@@ -40,6 +42,16 @@ function enqueueCheckMessages(scheduleExecutionIn: ScheduleExecutionIn) {
         checkMessagesBackoff.increase();
       }
       enqueueCheckMessages({ minutes: checkMessagesBackoff.current });
+    },
+    scheduleExecutionIn,
+  });
+}
+
+function enqueueToolTest(scheduleExecutionIn: ScheduleExecutionIn) {
+  scheduleSystemTask({
+    name: "Test tools",
+    action: async () => {
+      await agent.testTools();
     },
     scheduleExecutionIn,
   });
