@@ -1,5 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { callToolWithRetry } from "./utils/callToolWithRetry.ts";
 
 const transport = new StdioClientTransport({
   command: "npx",
@@ -15,7 +16,13 @@ type MCPClient = typeof client;
 
 const mcp = new Promise<{ browserMcpClient: MCPClient }>(async (resolve) => {
   await client.connect(transport);
-  setTimeout(() => resolve({ browserMcpClient: client }), 2_000);
+  const mcp = Promise.resolve({ browserMcpClient: client });
+  await callToolWithRetry({
+    mcp,
+    name: "browser_navigate",
+    arguments: { url: "https://www.carousell.com/inbox" },
+  });
+  resolve(await mcp);
 });
 
 export const closeClient = async () => {

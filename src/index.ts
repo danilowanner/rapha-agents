@@ -1,16 +1,19 @@
 import "dotenv/config";
 import { agent } from "./agent.ts";
+import { subscribeError } from "./log.ts";
 import { start } from "./scheduler.ts";
 import type { ScheduleExecutionIn } from "./schemas/scheduleExecutionIn.ts";
 import { shutdown, ShutdownReason } from "./shutdown.ts";
 import { createBackoff } from "./utils/createBackoff.ts";
 import { getUnreadMessages } from "./utils/getUnreadMessages.ts";
+import { notify } from "./utils/notify.ts";
 import { scheduleSystemTask } from "./utils/scheduleSystemTask.ts";
 
 process.on("SIGINT", async () => shutdown(ShutdownReason.SIGINT));
 process.on("SIGTERM", async () => shutdown(ShutdownReason.SIGTERM));
 process.on("uncaughtException", async (err) => shutdown(ShutdownReason.UNCAUGHT_EXCEPTION, err));
 process.on("unhandledRejection", async (reason) => shutdown(ShutdownReason.UNHANDLED_REJECTION, reason));
+subscribeError(notify);
 
 start();
 

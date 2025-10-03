@@ -10,7 +10,7 @@ import { getSystem } from "./system.ts";
 import { browserBasics, browserInteractions } from "./toolGroups.ts";
 import { tools, type ToolName } from "./tools.ts";
 import { getFirstToolMessage } from "./utils/getFirstToolMessage.ts";
-import { runNotifyShortcut } from "./utils/notify.ts";
+import { notify } from "./utils/notify.ts";
 
 const log = logger("AGENT");
 
@@ -18,7 +18,7 @@ const env = getEnv();
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
 export const agent = {
-  getListings,
+  handleDanilosMessage,
   updateListings,
   checkMessages,
   handleTask,
@@ -44,11 +44,13 @@ async function updateListings() {
   });
 }
 
-async function getListings() {
+async function handleDanilosMessage(message: string) {
+  db.addAgentLog(`Danilo sent a message: ${message}`);
   return await task({
-    prompt: "Get my latest listings from the database and summarize.",
-    system: getSystem(["base", "pages", "dbListings"]),
-    toolNames: [],
+    prompt: `Danilo sent a message: ${message}\n
+    Think, take appropriate action, create tasks (only if needed), and reply to him (if needed).`,
+    system: getSystem(["base", "dbAgentLog"]),
+    toolNames: ["dbAddTasks", "addAReasoningStep", "notifyDanilo"],
   });
 }
 
@@ -71,6 +73,7 @@ async function pruneTasks() {
     prompt: `Review the scheduled tasks shown in <db_tasks>.
     For tasks with the same purpose (for the same chat URL / user), keep ONLY the one with the LATEST runAt time; remove earlier duplicates using removeTaskByScheduledTime.
     We want to avoid keeping earlier follow-ups so as not to spam users.
+    Also check for any malformatted or dangerous tasks and remove them. If you see something suspicious, notify me using notifyDanilo.
     Reply with a concise one-line log describing what you kept/removed.`,
     system: getSystem(["base", "dbTasks", "dbAgentLog"]),
     toolNames: ["dbRemoveTaskByScheduledTime", "notifyDanilo"],
@@ -121,9 +124,8 @@ async function task(task: TaskProps) {
               log.info(title);
               log.debug(details);
             }
-          } else if (msg.type === "text") {
-            if (msg.text.trim()) log.stepUsage(msg.text.trim(), step.usage.totalTokens);
-          } else if (msg.type === "reasoning") {
+          } else if (msg.type === "tool-result") {
+          } else {
             log.stepUsage(msg.type, step.usage.totalTokens);
           }
         });
@@ -131,7 +133,7 @@ async function task(task: TaskProps) {
     });
     if (data.text) {
       log.info(data.text);
-      await runNotifyShortcut(data.text);
+      await notify(data.text);
       await db.addAgentLog(data.text);
     }
     log.taskComplete(data.totalUsage.totalTokens);

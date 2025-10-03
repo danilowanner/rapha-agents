@@ -8,7 +8,7 @@ import { task } from "./schemas/task.ts";
 import { getFirstToolMessage } from "./utils/getFirstToolMessage.ts";
 import { getPageText } from "./utils/getPageText.ts";
 import { getPageTitle } from "./utils/getPageTitle.ts";
-import { runNotifyShortcut } from "./utils/notify.ts";
+import { notify } from "./utils/notify.ts";
 
 const browserNavigate = tool({
   description: "Navigate to a URL and get content of the page.",
@@ -141,7 +141,7 @@ const notifyDanilo = tool({
   }),
   execute: async ({ message }) => {
     try {
-      await runNotifyShortcut(message);
+      await notify(message);
       return { success: true } as const;
     } catch (err) {
       return { success: false, error: String(err) } as const;

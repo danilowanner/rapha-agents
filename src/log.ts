@@ -1,12 +1,11 @@
 import chalk from "chalk";
-import { runNotifyShortcut } from "./utils/notify.ts";
 
 type Component = "AGENT" | (string & {});
 
 export const logger = (component: Component) => ({
   error: (msg: string, error?: unknown) => {
     console.error(`${c(component)} ${chalk.red(msg)}`, error);
-    runNotifyShortcut("Error: " + msg + (error instanceof Error ? `: ${error.message}` : ""));
+    onError("Error: " + msg + (error instanceof Error ? `: ${error.message}` : ""));
   },
   info: (msg: string, ...args: any[]) => {
     console.log(`${c(component)} ${msg}`, ...args);
@@ -41,4 +40,19 @@ function c(component: Component) {
 
 function cSpace(component: Component) {
   return " ".repeat(component.length + 2);
+}
+
+type Callback = (errorMessage: string) => void;
+const subs: Array<Callback> = [];
+
+export const subscribeError = (callback: Callback) => {
+  subs.push(callback);
+};
+
+function onError(message: string) {
+  subs.forEach((cb) => {
+    try {
+      cb(message);
+    } catch (err) {}
+  });
 }
