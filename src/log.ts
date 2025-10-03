@@ -1,46 +1,32 @@
-import chalk from "chalk";
+import { addLogEntry } from "../libs/cli/store.ts";
 
 type Component = "AGENT" | (string & {});
 
 export const logger = (component: Component) => ({
   error: (msg: string, error?: unknown) => {
-    console.error(`${c(component)} ${chalk.red(msg)}`, error);
-    onError("Error: " + msg + (error instanceof Error ? `: ${error.message}` : ""));
+    const errorString = error instanceof Error ? error.message : String(error);
+    onError("Error: " + msg + errorString);
+    addLogEntry({ level: "error", component, text: msg, details: errorString });
   },
-  info: (msg: string, ...args: any[]) => {
-    console.log(`${c(component)} ${msg}`, ...args);
+  info: (text: string, details?: string) => {
+    addLogEntry({ level: "info", component, text, details });
   },
-  debug: (msg: string) => {
-    const lines = msg
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter((l) => l);
-    lines
-      .map((l, i) => `${i === 0 ? c(component) : cSpace(component)} ${chalk.gray(l)}`)
-      .forEach((line) => console.log(line));
+  debug: (data: unknown) => {
+    addLogEntry({ level: "debug", component, text: JSON.stringify(data, null, 2) });
   },
-  notice: (msg: string, ...args: any[]) => {
-    console.log(`${c(component)} ${chalk.yellow(msg)}`, ...args);
+  notice: (text: string) => {
+    addLogEntry({ level: "notice", component, text });
   },
-  success: (msg: string, ...args: any[]) => {
-    console.log(`${c(component)} ${chalk.green(msg)}`, ...args);
+  success: (text: string) => {
+    addLogEntry({ level: "success", component, text });
   },
   stepUsage: (toolName: string, totalTokens?: number) => {
-    console.log(`${c(component)} ${chalk.gray(toolName)} (${chalk.yellow(totalTokens)})`);
+    addLogEntry({ level: "stepUsage", component, text: `Step: ${toolName} (${totalTokens ?? "-"})` });
   },
   taskComplete: (totalTokens?: number) => {
-    console.log(`${c(component)} ✅ ${chalk.gray("Task complete.")} Total tokens used: ${chalk.yellow(totalTokens)}`);
+    addLogEntry({ level: "taskComplete", component, text: `Task complete (${totalTokens ?? "-"})` });
   },
-  break: () => console.log("\n"),
 });
-
-function c(component: Component) {
-  return component === "AGENT" ? chalk.blue(`[${component}]`) : chalk.gray(`[${component}]`);
-}
-
-function cSpace(component: Component) {
-  return " ".repeat(component.length + 2);
-}
 
 type Callback = (errorMessage: string) => void;
 const subs: Array<Callback> = [];

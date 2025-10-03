@@ -83,7 +83,7 @@ async function pruneTasks() {
 
 async function testTools() {
   return await task({
-    prompt: `Schedule tasks to test the following tools: addAReasoningStep, dbAddTasks, notifyDanilo.}
+    prompt: `Schedule tasks to test the following tools: addAReasoningStep, dbAddTasks, notifyDanilo.
     For each tool, schedule a task to test it thoroughly and provide any feedback or notes.
     You can schedule the tasks for now (0 minutes), they will be processed one by one.`,
     system: getSystem(["base"]),
@@ -121,8 +121,7 @@ async function task(task: TaskProps) {
             if (msg.toolName === "addAReasoningStep" && msg.input && typeof msg.input.title === "string") {
               const title = msg.input.title.trim();
               const details = msg.input.details?.trim();
-              log.info(title);
-              log.debug(details);
+              log.info(title, details);
             }
           } else if (msg.type === "tool-result") {
           } else {
@@ -133,6 +132,7 @@ async function task(task: TaskProps) {
     });
     if (data.text) {
       log.info(data.text);
+      log.debug(data.response.messages);
       await notify(data.text);
       await db.addAgentLog(data.text);
     }

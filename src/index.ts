@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { startCli } from "../libs/cli/index.tsx";
 import { agent } from "./agent.ts";
 import { subscribeError } from "./log.ts";
 import { start } from "./scheduler.ts";
@@ -16,6 +17,13 @@ process.on("unhandledRejection", async (reason) => shutdown(ShutdownReason.UNHAN
 subscribeError(notify);
 
 start();
+startCli({
+  onCommand: async (command: string) => {
+    if (command === "exit") {
+      await shutdown(ShutdownReason.MANUAL);
+    }
+  },
+});
 
 enqueueCheckMessages({ minutes: 0 });
 //enqueueToolTest({ minutes: 0 });

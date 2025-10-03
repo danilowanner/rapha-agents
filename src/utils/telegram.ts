@@ -14,6 +14,6 @@ telegramBot.on("message", ({ message }) => {
   if (from.username !== "danilowanner") return;
   if (!text) return;
 
-  log.info("Received:", text);
+  log.info(`Received: ${text}`);
   agent.handleDanilosMessage(text);
 });

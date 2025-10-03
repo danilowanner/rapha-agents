@@ -40,7 +40,8 @@ export async function callToolWithRetry(opts: CallToolOptions): Promise<Compatib
         return result;
       }
     } catch (err) {
-      log.notice(`Error calling tool ${name} (attempt ${attempt + 1}):`, err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      log.notice(`Error calling tool ${name} (attempt ${attempt + 1}): ${errMsg}`);
       if (attempt >= retries) throw err;
     }
     const delaySeconds = backoff.current;

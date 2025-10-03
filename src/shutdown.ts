@@ -16,7 +16,6 @@ export const ShutdownReason = {
 
 export async function shutdown(reason: ShutdownReason = ShutdownReason.MANUAL, details?: any) {
   const exitCode = reasonToExitCode(reason);
-  log.break();
   try {
     if (details) log.error(details);
     log.notice(`Shutting down (${String(reason)}): closing MCP client...`);
