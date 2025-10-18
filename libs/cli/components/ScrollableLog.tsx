@@ -32,12 +32,12 @@ export const ScrollableLog: React.FC<Props> = ({ entries, height }) => {
         const levelColor = e.level in colorByLevel ? colorByLevel[e.level] : "white";
         return (
           <Box key={e.id} flexDirection="row">
-            <Box width={12} marginRight={1}>
+            <Box width={12}>
               <Text color={componentColor} wrap="truncate-end">
                 {e.component}
               </Text>
             </Box>
-            <Box>
+            <Box flexDirection="column" marginLeft={1}>
               <Text color={levelColor}>{e.text}</Text>
               {e.details && <Text color={"gray"}>{e.details}</Text>}
             </Box>

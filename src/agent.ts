@@ -48,7 +48,9 @@ async function handleDanilosMessage(message: string) {
   db.addAgentLog(`Danilo sent a message: ${message}`);
   return await task({
     prompt: `Danilo sent a message: ${message}\n
-    Think, take appropriate action, create tasks (only if needed), and reply to him (if needed).`,
+    Think, take appropriate action, create tasks (only if needed), and reply to him (if needed).
+    To use all tools, you must create a task using dbAddTasks.
+    When you pick up each task, you will be provided with all tools.`,
     system: getSystem(["base", "dbAgentLog"]),
     toolNames: ["dbAddTasks", "addAReasoningStep", "notifyDanilo"],
   });
@@ -116,6 +118,7 @@ async function task(task: TaskProps) {
       system,
       onStepFinish: (step) => {
         step.content.forEach((msg) => {
+          log.debug(msg);
           if (msg.type === "tool-call") {
             log.stepUsage(msg.toolName, step.usage.totalTokens);
             if (msg.toolName === "addAReasoningStep" && msg.input && typeof msg.input.title === "string") {
@@ -123,8 +126,7 @@ async function task(task: TaskProps) {
               const details = msg.input.details?.trim();
               log.info(title, details);
             }
-          } else if (msg.type === "tool-result") {
-          } else {
+          } else if (msg.type !== "tool-result") {
             log.stepUsage(msg.type, step.usage.totalTokens);
           }
         });
@@ -132,7 +134,6 @@ async function task(task: TaskProps) {
     });
     if (data.text) {
       log.info(data.text);
-      log.debug(data.response.messages);
       await notify(data.text);
       await db.addAgentLog(data.text);
     }

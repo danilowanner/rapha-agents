@@ -54,19 +54,18 @@ async function processQueue() {
 
     if (next.source === "system") {
       taskQueue.delete(next.task);
-      log.info(`Running scheduled system task: ${next.task.name}`);
+      log.info("Running scheduled system task:", next.task.name);
       try {
         await next.task.action();
-        log.info(`Completed task: ${next.task.name}`);
+        log.info("Completed task:", next.task.name);
       } catch (err) {
         handleSystemTaskFailure(next.task, err);
       }
     } else {
-      log.info("Running scheduled DB task:");
-      log.info(next.task.task);
+      log.info("Running scheduled DB task:", next.task.task);
       await agent.handleTask(next.task);
       await db.removeTask(next.task);
-      log.info("Completed DB task.");
+      log.info("Completed DB task:", next.task.task);
     }
   } catch (e) {
     log.error("Task error:", e);
