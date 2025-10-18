@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*", "libs/**/*"]
+  "include": ["api/**/*", "carousell/**/*", "libs/**/*"]
 }
