@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start-api": "tsx api/index.ts",
+    "start-api": "exec tsx api/index.ts",
     "dev-api": "tsx watch api/index.ts",
-    "start-carousell": "tsx carousell/index.ts",
+    "start-carousell": "exec tsx carousell/index.ts",
     "dev-carousell": "tsx watch carousell/index.ts",
     "tsc": "tsc --noEmit"
   },
