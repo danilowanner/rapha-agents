@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { startCli } from "../libs/cli/index.tsx";
 import { agent } from "./agent.ts";
 import { subscribeError } from "./log.ts";

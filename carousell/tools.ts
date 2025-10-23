@@ -1,9 +1,11 @@
 import { tool } from "ai";
 import z from "zod";
+
+import { reasoningTool } from "../libs/ai/reasoningTool.ts";
+
 import { db } from "./db.ts";
 import { browser } from "./mcp.ts";
 import { listing } from "./schemas/listing.ts";
-import { reasoning } from "./schemas/reasoning.ts";
 import { task } from "./schemas/task.ts";
 import { getFirstToolMessage } from "./utils/getFirstToolMessage.ts";
 import { getPageText } from "./utils/getPageText.ts";
@@ -199,18 +201,8 @@ const dbRemoveTaskByScheduledTime = tool({
   },
 });
 
-const addAReasoningStep = tool({
-  description: `Add a step to the reasoning process. Use BEFORE other tools to outline approach.
-  Use tool for updates when significant changes occur or if unlclear about next steps. NEVER duplicate prior reasoning.`,
-  inputSchema: reasoning,
-  execute: async ({ title, details }) => {
-    try {
-      await db.addReasoningLog({ title, details });
-      return { success: true } as const;
-    } catch (err) {
-      return { success: false, error: String(err) } as const;
-    }
-  },
+const addAReasoningStep = reasoningTool(async ({ title, details }) => {
+  db.addReasoningLog({ title, details });
 });
 
 export const tools = {

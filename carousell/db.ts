@@ -3,7 +3,6 @@ import { JSONFilePreset } from "lowdb/node";
 import { agent } from "./agent.ts";
 import type { Listing } from "./schemas/listing.ts";
 import type { Message } from "./schemas/message.ts";
-import type { Reasoning } from "./schemas/reasoning.ts";
 import type { ScheduleExecutionIn } from "./schemas/scheduleExecutionIn.ts";
 import type { Task } from "./schemas/task.ts";
 import { getScheduleDelayMs } from "./utils/getScheduleDelayMs.ts";
@@ -19,7 +18,7 @@ type Data = {
 export type DBListing = Listing;
 export type DBTask = Task & { scheduledTimestamp: number };
 export type DBMessage = Message & { createdTimestamp: number };
-export type DBReasoning = Reasoning & { createdTimestamp: number };
+export type DBReasoning = { title: string; details: string; createdTimestamp: number };
 
 const defaultData: Data = { listings: [], tasks: [], agentLog: [], reasoningLog: [] };
 const fileDB = await JSONFilePreset<Data>("db.json", defaultData);
@@ -42,7 +41,7 @@ export const db = {
   getAgentLog: () => fileDB.data.agentLog,
   addAgentLog: async (message: string) => fileDB.update(({ agentLog }) => agentLog.push(getDbMessage({ message }))),
   getReasoningLog: () => fileDB.data.reasoningLog,
-  addReasoningLog: async (reasoning: Reasoning) =>
+  addReasoningLog: async (reasoning: Omit<DBReasoning, "createdTimestamp">) =>
     fileDB.update(({ reasoningLog }) => reasoningLog.push(getDbReasoning(reasoning))),
 };
 
@@ -55,11 +54,11 @@ function getDbTask(task: Task): DBTask {
   return { ...task, scheduledTimestamp: Date.now() + getScheduleDelayMs(scheduleExecutionIn) };
 }
 
-function getDbMessage(message: Message): DBMessage {
+function getDbMessage(message: Omit<DBMessage, "createdTimestamp">): DBMessage {
   return { ...message, createdTimestamp: Date.now() };
 }
 
-function getDbReasoning(reasoning: Reasoning): DBReasoning {
+function getDbReasoning(reasoning: Omit<DBReasoning, "createdTimestamp">): DBReasoning {
   return { ...reasoning, createdTimestamp: Date.now() };
 }
 

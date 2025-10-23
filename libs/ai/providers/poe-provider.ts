@@ -18,6 +18,8 @@ type ModelId =
   | "Claude-Sonnet-4" // ✅ tool calling
   | "Claude-Sonnet-4-Reasoning"
   | "Claude-Opus-4.1" // ✅ tool calling
+  | "Claude-Haiku-4.5"
+  | "Claude-Sonnet-4.5"
   | "Grok-4-Fast-Reasoning" // ❌ tool calling
   | "Grok-4-Fast-Non-Reasoning" // ❌ tool calling
   | "Grok-Code-Fast-1" // ❌ tool calling

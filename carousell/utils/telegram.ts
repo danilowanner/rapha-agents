@@ -1,4 +1,4 @@
-import { getEnv } from "../env.ts";
+import { env } from "../../libs/env.ts";
 
 import { Bot } from "grammy";
 import { agent } from "../agent.ts";
@@ -6,7 +6,7 @@ import { logger } from "../log.ts";
 
 const log = logger("TELEGRAM");
 
-export const telegramBot = new Bot(getEnv().telegramBotToken);
+export const telegramBot = new Bot(env.telegramBotToken);
 telegramBot.start();
 
 telegramBot.on("message", ({ message }) => {

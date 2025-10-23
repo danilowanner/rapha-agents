@@ -1,10 +1,10 @@
 import { generateText, stepCountIs, type Tool } from "ai";
 
+import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
+import { env } from "../libs/env.ts";
 import { db } from "./db.ts";
-import { getEnv } from "./env.ts";
 import { logger } from "./log.ts";
 import { browser } from "./mcp.ts";
-import { createPoeAdapter } from "./providers/poe-provider.ts";
 import type { Task } from "./schemas/task.ts";
 import { getSystem } from "./system.ts";
 import { browserBasics, browserInteractions } from "./toolGroups.ts";
@@ -14,7 +14,6 @@ import { notify } from "./utils/notify.ts";
 
 const log = logger("AGENT");
 
-const env = getEnv();
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
 export const agent = {
