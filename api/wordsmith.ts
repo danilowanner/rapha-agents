@@ -31,7 +31,6 @@ export const wordsmithHandler = async (c: Context) => {
     }
 
     const formData = await c.req.formData();
-    console.log(formData.get("options"));
     const { prompt, user, options } = inputSchema.parse({
       prompt: formData.get("prompt"),
       user: formData.get("user"),

@@ -22,7 +22,7 @@ app.post("/wordsmith", wordsmithHandler);
 
 const port = parseInt(env.port, 10);
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     port,
@@ -31,3 +31,23 @@ serve(
     console.log(`Server running on http://localhost:${info.port}`);
   }
 );
+
+/**
+ * Handle graceful shutdown on SIGTERM/SIGINT
+ */
+function shutdown(signal: string) {
+  console.log(`\nReceived ${signal}, shutting down gracefully...`);
+  server.close(() => {
+    console.log("Server closed");
+    process.exit(0);
+  });
+
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    console.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 10000);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
