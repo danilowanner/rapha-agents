@@ -4,6 +4,7 @@ import { Hono } from "hono";
 
 import { env } from "../libs/env.ts";
 import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
+import { filenameHandler } from "./filename.ts";
 import { wordsmithHandler } from "./wordsmith.ts";
 
 const app = new Hono();
@@ -18,6 +19,7 @@ app.get("/health", (c: Context) => {
   return c.json({ status: "ok" });
 });
 
+app.post("/filename", filenameHandler);
 app.post("/wordsmith", wordsmithHandler);
 
 const port = parseInt(env.port, 10);
