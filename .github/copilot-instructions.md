@@ -5,7 +5,13 @@ When suggesting code changes, ensure that they are minimal and directly related 
 
 ## Project
 
-We are working on an LLM agent that autonomously gathers data and fills forms in your logged-in Chrome using Browser MCP.
+We are working on an LLM agents to automate various tasks.
+
+Key packages within the project:
+
+- api/ : An API server that exposes endpoints for different agents.
+- carousell/ : An agent that autonomously gathers data and fills forms in your logged-in Chrome using Browser MCP.
+- libs/ : Shared libraries and utilities used across different packages.
 
 ## Source control
 
