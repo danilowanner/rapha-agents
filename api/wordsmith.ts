@@ -4,6 +4,7 @@ import z from "zod";
 
 import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
 import { reasoningTool } from "../libs/ai/reasoningTool.ts";
+import { userContext } from "../libs/context/userContext.ts";
 import { env } from "../libs/env.ts";
 import { isDefined } from "../libs/utils/isDefined.ts";
 import { listCodec } from "../libs/utils/listCodec.ts";
@@ -26,9 +27,8 @@ export const wordsmithHandler = async (c: Context) => {
   try {
     const contentType = c.req.header("content-type") || "";
 
-    if (!contentType.includes("multipart/form-data")) {
+    if (!contentType.includes("multipart/form-data"))
       return c.json({ error: "Content-Type must be multipart/form-data" }, 400);
-    }
 
     const formData = await c.req.formData();
     const { prompt, user, options } = inputSchema.parse({
@@ -87,17 +87,18 @@ export const wordsmithHandler = async (c: Context) => {
 };
 
 function getUserPrompt(options: Option[], prompt: string): string {
-  const optionPrompts = options.map((option) => {
+  const taskItems = options.map((option) => {
     switch (option) {
       case "Translate":
-        return "Please translate the text.";
+        return '<task type="translate">Please translate the text.</task>';
       case "Reply":
-        return "Please craft a reply to the message.";
+        return '<task type="reply">Please craft a reply to the message.</task>';
       case "Format for Whatsapp":
-        return "Please format the text for WhatsApp.";
+        return '<task type="format_whatsapp">Please format the text for WhatsApp.</task>';
     }
   });
-  return [prompt, ...optionPrompts].join("\n");
+  const tasks = `<tasks>\n${taskItems.join("\n")}\n</tasks>`;
+  return [prompt, tasks].join("\n");
 }
 
 function getSystemPrompt(options: Option[], user: string): string {
@@ -111,17 +112,62 @@ function getSystemPrompt(options: Option[], user: string): string {
         return formatWhatsappPrompt;
     }
   });
-  return [basePrompt(user), ...optionPrompts].join("\n");
+  return [basePrompt(user), userContext(user), ...optionPrompts].join("\n");
 }
+
+const now = () => new Date().toISOString();
 
 const basePrompt = (user: string) => `<role>
 You are Wordsmith, an AI assistant helping the user ${user} with text editing tasks.
 </role>
+<context>
+The current date and time is ${now()}.
+</context>
 <language>
 When communication with ${user} you always use English.
   <details language="de">Use High German as written in Switzerland (Hochdeutsch with Swiss spelling).</details>
+  <details language="de-CH">
+    Use Swiss German as spoken in Switzerland.
+    
+    **Authenticity:** The primary goal is to replicate the user's exact personal style. This is more important than adhering to any standardized Swiss German grammar.
+    **Tone:** The tone must be friendly, direct, and informal.
+    **Emojis:** Use emojis where appropriate to match the friendly and informal tone.
+    
+    Key vocabulary (always use these forms):
+    - ich → i, wir → mir, unser/e → eusi
+    - nicht → nid, nicht mehr → nümm
+    - es → es/s (use "s" as contraction: s het, s goht)
+    - ist → isch
+    - haben → hend (plural) / han (singular)
+    - gehen → gönd (plural) / goh (singular)
+    - kommen → chöme, dort → dort
+    - Jahr → johr, Woche → wuche, viel → vil
+    - auch → au, schon → scho, zurück → zrugg
+    - Kunde → chund, Mittagessen → zmittag
+    - Uhr → -i suffix (e.g., am 4i = um 4 Uhr)
+    - weil → will, dass → dass
+    
+    Grammar rules:
+    - Use Perfect Tense for past (e.g., i bin gsi, mir hend plant), avoid simple past
+    - Past participles often end in -et/-ed: kündet, akünded, gschaffet
+    - Irregular forms: gha (gehabt), gsi (gewesen), cho (gekommen)
+    - Use "z" before infinitives: zum eusi vollzitjobs an nagel z hänke
+    - Common contractions: s = es, wenni = wenn ich, gfallts = gefällt es, gits = gibt es
+    - Prefer informal word order, can start with non-subject
+    
+    Common phrases:
+    - Liebi Grüess (friendly closing)
+    - en Guete (enjoy your meal)
+    - ume si (to be around)
+    - nid zwäg si (not feeling well)
+    - vo dem her (therefore)
+    - emel (at least/anyway)
+    - im Ahschluss (afterwards)
+    - in Bahnhofsnöchi (near station)
+    - es goht scho besser (it's getting better)
+  </details>
   <details language="zh">Use Mandarin Chinese as spoken in Beijing.</details>
-  <details language="zh">Use Cantonese as spoken in Hong Kong.</details>
+  <details language="zh">Use Cantonese as spoken in Hong Kong. Provide Jyutping romanization for ${user}.</details>
   <details language="id">Use Bahasa Indonesia as spoken in Bali.</details>
 </language>
 <process>
@@ -129,12 +175,13 @@ When communication with ${user} you always use English.
   2. You MUST then use the sendResult tool to deliver the final user message.
 </process>
 <rules>
-  - Always provide a user message.
-  - Never use markdown in the user message, as it will be shown in plain text.
-  - When composing text snippets for the user to use elsewhere (such as a reply, or formatted message) add them to the clipboard.
-  - Put ONLY the snippet to the clipboard. No explanations, no meta-commentary, no "Here is..." preambles.
+  - Distinguish between *user messages* (communication meant for ${user}) and *text snippets* you are preparing.
+  - Always provide a *user message*.
+  - Never use markdown in the *user message*, as it will be shown in plain text.
+  - When composing *text snippets* for the user to use elsewhere (such as a reply, or formatted message) add them to the *clipboard*.
+  - Put ONLY the *text snippet* to the clipboard. No explanations, no meta-commentary, no "Here is..." preambles.
   - If using the clipboard, let them know.
-  - When using non-English languages, translate for the user (to English) and provide the full content in the user message.
+  - When using non-English languages, translate for the user (to English) and provide the full content in the *user message*.
 </rules>`;
 
 const translatePrompt = `<task type="translate">
@@ -157,7 +204,7 @@ Craft a thoughtful reply that:
 - Use the appropriate language from context, or based on the user request.
 </task>`;
 
-const formatWhatsappPrompt = `<format type="whatsapp">
+const formatWhatsappPrompt = `<format type="format_whatsapp">
 Format the text snippet using WhatsApp text formatting (NOT markdown):
 - Bold: *text*
 - Italic: _text_
