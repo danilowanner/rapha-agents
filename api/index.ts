@@ -4,6 +4,7 @@ import { Hono } from "hono";
 
 import { env } from "../libs/env.ts";
 import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
+import { busHandler } from "./bus.ts";
 import { filenameHandler } from "./filename.ts";
 import { wordsmithHandler } from "./wordsmith.ts";
 
@@ -19,6 +20,7 @@ app.get("/health", (c: Context) => {
   return c.json({ status: "ok" });
 });
 
+app.post("/bus", busHandler);
 app.post("/filename", filenameHandler);
 app.post("/wordsmith", wordsmithHandler);
 
