@@ -57,6 +57,7 @@ export async function busHandler(c: Context): Promise<Response> {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
+            timeZone: "Asia/Hong_Kong",
           });
           return `${timeStr} (${eta.minFromNow} min)`;
         })
