@@ -1,8 +1,9 @@
-import { generateText } from "ai";
+import { generateText, type UserContent } from "ai";
 import type { Context } from "hono";
 import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
 import { env } from "../libs/env.ts";
 import { fileToImageBuffers } from "../libs/utils/fileToImageBuffers.ts";
+import { fileToText } from "../libs/utils/fileToText.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
@@ -33,21 +34,28 @@ export async function filenameHandler(c: Context) {
     }
 
     const extension = file.name.split(".").pop() || "pdf";
+
+    const extractedText = file.type === "application/pdf" ? await fileToText(file).catch(() => null) : null;
     const imageBuffers = await fileToImageBuffers(file, { maxPages: 5, scale: 1024 });
+
+    const content: UserContent = [{ type: "text", text: "Analyze this document and generate a filename:" }];
+
+    if (extractedText) {
+      content.push({
+        type: "text",
+        text: `<extracted_text>\n${extractedText}\n</extracted_text>`,
+      });
+    }
+
+    content.push(...imageBuffers.map((buffer) => ({ type: "image" as const, image: buffer })));
 
     const { text } = await generateText({
       model: poe("Claude-Haiku-4.5"),
-      system: systemPrompt,
+      system: systemPrompt(),
       messages: [
         {
           role: "user",
-          content: [
-            { type: "text", text: "Analyze this document and generate a filename:" },
-            ...imageBuffers.map((buffer) => ({
-              type: "image" as const,
-              image: buffer,
-            })),
-          ],
+          content,
         },
       ],
       temperature: 0.3,
@@ -70,9 +78,10 @@ export async function filenameHandler(c: Context) {
     );
   }
 }
+
 const today = () => new Date().toISOString().split("T")[0];
 
-const systemPrompt = `<role>
+const systemPrompt = () => `<role>
 You are a filename generator. Analyze the provided file contents and extract:
 1. The most appropriate title (e.g., subject line, heading, or main topic)
 2. The relevant date if present in the content
