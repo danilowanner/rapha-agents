@@ -12,30 +12,52 @@ import { sendResult } from "./../libs/ai/sendResultTool.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
-const allOptions = ["Translate", "Reply", "Format for Whatsapp"] as const;
+const allOptions = ["Translate", "Translate Screen", "Reply", "Format for Whatsapp", "Think First"] as const;
 
 const optionSchema = z.enum(allOptions);
 type Option = z.infer<typeof optionSchema>;
 
 const inputSchema = z.object({
-  prompt: z.string().min(1),
+  prompt: z.string(),
   user: z.string().min(1),
   options: listCodec(z.array(optionSchema)).optional().default([]),
 });
+
+type Response = {
+  userMessage: string;
+  clipboard?: string;
+  reasoning?: Array<{ title: string; details: string }>;
+  usage?: Record<string, unknown>;
+  totalUsage?: Record<string, unknown>;
+};
+
+const sendResultToolName = "sendResult";
+const reasoningToolName = "addAReasoningStep";
 
 export const wordsmithHandler = async (c: Context) => {
   try {
     const contentType = c.req.header("content-type") || "";
 
-    if (!contentType.includes("multipart/form-data"))
-      return c.json({ error: "Content-Type must be multipart/form-data" }, 400);
+    if (!contentType.includes("multipart/form-data")) {
+      const warningMessage = `Error: Content-Type must be multipart/form-data`;
+      console.warn("[RESPONSE]", warningMessage);
+      return c.json<Response>({ userMessage: warningMessage });
+    }
 
     const formData = await c.req.formData();
-    const { prompt, user, options } = inputSchema.parse({
+    const inputParsed = inputSchema.safeParse({
       prompt: formData.get("prompt"),
       user: formData.get("user"),
       options: formData.get("options"),
     });
+
+    if (!inputParsed.success) {
+      const warningMessage = `Error: Invalid input.\n${inputParsed.error.message}`;
+      console.warn("[RESPONSE]", warningMessage);
+      return c.json<Response>({ userMessage: warningMessage });
+    }
+
+    const { prompt, user, options } = inputParsed.data;
 
     const imageFile = formData.get("image") as File | null;
     const imageBuffer: Buffer | undefined = imageFile ? Buffer.from(await imageFile.arrayBuffer()) : undefined;
@@ -48,31 +70,36 @@ export const wordsmithHandler = async (c: Context) => {
     ].filter(isDefined);
 
     const data = await generateText({
-      model: poe("Claude-Sonnet-4.5"),
+      model: poe("Claude-Haiku-4.5"),
       messages: [{ role: "user" as const, content: userMessageContent }],
       system: getSystemPrompt(options, user),
       tools: {
-        sendResult: sendResult(async ({ userMessage }) => {
+        [sendResultToolName]: sendResult(async ({ userMessage }) => {
           console.log(`[USER MSG] ${userMessage}`);
         }),
-        addAReasoningStep: reasoningTool(async ({ title, details }) => {
+        [reasoningToolName]: reasoningTool(async ({ title, details }) => {
           console.log(`[REASONING] ${title}\n${details}`);
         }),
       },
       toolChoice: "required",
-      stopWhen: hasToolCall("sendResult"),
+      stopWhen: hasToolCall(sendResultToolName),
     });
 
     const allToolCalls = data.steps.flatMap((step) => step.toolCalls).filter((call) => !call.dynamic);
-    const reasoningSteps = allToolCalls.filter((call) => call.toolName === "addAReasoningStep").map((c) => c.input);
-    const result = allToolCalls.find((call) => call.toolName === "sendResult")?.input;
+    const reasoningSteps = allToolCalls.filter((call) => call.toolName === reasoningToolName).map((c) => c.input);
+    const result = allToolCalls.find((call) => call.toolName === sendResultToolName)?.input;
 
     if (!result) {
-      return c.json({ error: "No result generated - sendResult tool was not called" }, 500);
+      const warningMessage = `Error: No result generated. ${sendResultToolName} tool was not called.`;
+      console.warn("[RESPONSE]", warningMessage);
+      console.debug(data.content);
+      return c.json<Response>({
+        userMessage: warningMessage,
+      });
     }
 
     console.log("[GENERATED]", result.resultClipboard);
-    return c.json({
+    return c.json<Response>({
       clipboard: result.resultClipboard,
       userMessage: result.userMessage,
       reasoning: reasoningSteps,
@@ -87,7 +114,7 @@ export const wordsmithHandler = async (c: Context) => {
 };
 
 function getUserPrompt(options: Option[], prompt: string): string {
-  const taskItems = options.map((option) => {
+  const taskItems = options.map<string>((option) => {
     switch (option) {
       case "Translate":
         return '<task type="translate">Please translate the text.</task>';
@@ -95,6 +122,10 @@ function getUserPrompt(options: Option[], prompt: string): string {
         return '<task type="reply">Please craft a reply to the message.</task>';
       case "Format for Whatsapp":
         return '<task type="format_whatsapp">Please format the text for WhatsApp.</task>';
+      case "Translate Screen":
+        return '<task type="screen_reader">Please read, translate and summarize the screen.</task>';
+      case "Think First":
+        return '<task type="think_first">REQUIRED: You MUST use the addAReasoningStep tool to outline your approach before sending the result.</task>';
     }
   });
   const tasks = `<tasks>\n${taskItems.join("\n")}\n</tasks>`;
@@ -102,7 +133,7 @@ function getUserPrompt(options: Option[], prompt: string): string {
 }
 
 function getSystemPrompt(options: Option[], user: string): string {
-  const optionPrompts = options.map((option) => {
+  const optionPrompts = options.map<string>((option) => {
     switch (option) {
       case "Translate":
         return translatePrompt;
@@ -110,6 +141,10 @@ function getSystemPrompt(options: Option[], user: string): string {
         return replyPrompt;
       case "Format for Whatsapp":
         return formatWhatsappPrompt;
+      case "Translate Screen":
+        return translateScreenPrompt;
+      case "Think First":
+        return thinkFirstPrompt;
     }
   });
   return [basePrompt(user), userContext(user), ...optionPrompts].join("\n");
@@ -170,18 +205,23 @@ When communication with ${user} you always use English.
   <details language="zh">Use Cantonese as spoken in Hong Kong. Provide Jyutping romanization for ${user}.</details>
   <details language="id">Use Bahasa Indonesia as spoken in Bali.</details>
 </language>
-<process>
-  1. Use the reasoning tool to outline your approach BEFORE sending the result. (optional)
-  2. You MUST then use the sendResult tool to deliver the final user message.
-</process>
+<output>
+You MUST use the ${sendResultToolName} tool to deliver the final user message.
+
+CRITICAL: Do NOT use the ${reasoningToolName} tool unless:
+1. You see explicit instructions in the <tasks> section telling you to use it, OR
+2. The task involves truly complex linguistic decisions (multiple conflicting requirements, significant ambiguity, or critical judgment calls)
+
+For standard translations, replies, and formatting tasks: proceed directly to ${sendResultToolName} without reasoning.
+</output>
 <rules>
   - Distinguish between *user messages* (communication meant for ${user}) and *text snippets* you are preparing.
   - Always provide a *user message*.
-  - Never use markdown in the *user message*, as it will be shown in plain text.
+  - NEVER use markdown in the *user message*, as it will be shown in plain text.
   - When composing *text snippets* for the user to use elsewhere (such as a reply, or formatted message) add them to the *clipboard*.
   - Put ONLY the *text snippet* to the clipboard. No explanations, no meta-commentary, no "Here is..." preambles.
-  - If using the clipboard, let them know.
-  - When using non-English languages, translate for the user (to English) and provide the full content in the *user message*.
+  - If using the clipboard, let ${user} know.
+  - When using non-English languages, translate for ${user} (to English) and provide the full content in the *user message*.
 </rules>`;
 
 const translatePrompt = `<task type="translate">
@@ -218,3 +258,37 @@ Format the text snippet using WhatsApp text formatting (NOT markdown):
 
 Compose a message which suits WhatsApp, no subject line or formal greetings/signoff like "Dear...", "Best regards," etc.
 </format>`;
+
+const translateScreenPrompt = `<task type="screen_reader">
+You are to read the content of a screen (e.g., webpage, app interface) and perform the following:
+1. Accurately translate all visible text into English.
+2. Summarize the main purpose and key elements of the screen.
+3. Note any important actions or buttons present.
+Ensure clarity and conciseness in your summary, focusing on what a user needs to know about the screen.
+
+<format>
+  1. Key elements and purpose of the screen.
+  2. Important actions/buttons, translation and original text.
+  3. Any additional information on the screen.
+</format>
+</task>`;
+
+const thinkFirstPrompt = `<tool_call tool_name="${reasoningToolName}">
+Use the reasoning tool to think through your approach before generating the final output. Structure your reasoning as follows:
+
+**Analysis:**
+- What is the user asking for? (translation, reply, formatting, etc.)
+- What language/style requirements apply?
+- What tone and context clues are present?
+
+**Approach:**
+- Key decisions: word choice, formality level, structure
+- Potential challenges: idioms, cultural references, ambiguities
+- How to preserve intent while adapting style
+
+**Execution Plan:**
+- Steps to complete the task
+- Quality checks before delivering
+
+This internal reasoning ensures high-quality, contextually appropriate output.
+</tool_call>`;
