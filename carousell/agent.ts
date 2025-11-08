@@ -44,6 +44,7 @@ async function updateListings() {
 }
 
 async function handleDanilosMessage(message: string) {
+  log.info(`Received message: ${message}`);
   db.addAgentLog(`Danilo sent a message: ${message}`);
   return await task({
     prompt: `Danilo sent a message: ${message}\n

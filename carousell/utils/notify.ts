@@ -1,17 +1,18 @@
 import { execFile } from "node:child_process";
+import { shorten } from "../../libs/utils/shorten.ts";
 import { telegramBot } from "./telegram.ts";
 
 const MAX_LENGTH = 600;
 
-export async function notify(message?: string): Promise<void> {
+export async function notify(message?: string, maxLength = MAX_LENGTH): Promise<void> {
   if (!message) return;
-  await Promise.all([runNotifyShortcut(message), runTelegramNotify(message)]);
+  await Promise.all([runNotifyShortcut(message, maxLength), runTelegramNotify(message, maxLength)]);
 }
 
 /**
  * Runs the "Agent Notify" macOS Shortcut passing string input.
  */
-export function runNotifyShortcut(message: string): Promise<void> {
+export function runNotifyShortcut(message: string, maxLength = MAX_LENGTH): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
       const args = ["run", "Agent Notify"];
@@ -21,7 +22,7 @@ export function runNotifyShortcut(message: string): Promise<void> {
         }
         resolve();
       });
-      const truncated = shorten(message);
+      const truncated = shorten(message, maxLength);
       child.stdin?.write(truncated + "\n", "utf8");
       child.stdin?.end();
     } catch (err) {
@@ -30,13 +31,7 @@ export function runNotifyShortcut(message: string): Promise<void> {
   });
 }
 
-export async function runTelegramNotify(message: string): Promise<void> {
+export async function runTelegramNotify(message: string, maxLength = MAX_LENGTH): Promise<void> {
   const daniloChatId = "30318273";
-  await telegramBot.api.sendMessage(daniloChatId, shorten(message));
-}
-
-function shorten(text: string): string {
-  if (text.length <= MAX_LENGTH) return text;
-  const sliceLen = MAX_LENGTH - 2;
-  return text.slice(0, sliceLen).trimEnd() + "…";
+  await telegramBot.api.sendMessage(daniloChatId, shorten(message, maxLength));
 }

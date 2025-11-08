@@ -8,6 +8,7 @@ import { createBackoff } from "./utils/createBackoff.ts";
 import { getUnreadMessages } from "./utils/getUnreadMessages.ts";
 import { notify } from "./utils/notify.ts";
 import { scheduleSystemTask } from "./utils/scheduleSystemTask.ts";
+import { telegramBot } from "./utils/telegram.ts";
 
 process.on("SIGINT", async () => shutdown(ShutdownReason.SIGINT));
 process.on("SIGTERM", async () => shutdown(ShutdownReason.SIGTERM));
@@ -27,6 +28,14 @@ startCli({
 enqueueCheckMessages({ minutes: 0 });
 //enqueueToolTest({ minutes: 0 });
 //enqueueUpdateListing({ minutes: 0 });
+
+telegramBot.on("message", ({ message }) => {
+  const { from, text } = message;
+  if (from.username !== "danilowanner") return;
+  if (!text) return;
+
+  agent.handleDanilosMessage(text);
+});
 
 const checkMessagesBackoff = createBackoff({ initial: 1, max: 60 });
 

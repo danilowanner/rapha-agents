@@ -4,6 +4,7 @@ import z from "zod";
 
 import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
 import { reasoningTool } from "../libs/ai/reasoningTool.ts";
+import { sendMessage } from "../libs/ai/sendMessageTool.ts";
 import { userContext } from "../libs/context/userContext.ts";
 import { env } from "../libs/env.ts";
 import { isDefined } from "../libs/utils/isDefined.ts";
@@ -31,6 +32,7 @@ type Response = {
   totalUsage?: Record<string, unknown>;
 };
 
+const sendMessageToolName = "sendMessage";
 const sendResultToolName = "sendResult";
 const reasoningToolName = "addAReasoningStep";
 
@@ -39,9 +41,7 @@ export const wordsmithHandler = async (c: Context) => {
     const contentType = c.req.header("content-type") || "";
 
     if (!contentType.includes("multipart/form-data")) {
-      const warningMessage = `Error: Content-Type must be multipart/form-data`;
-      console.warn("[RESPONSE]", warningMessage);
-      return c.json<Response>({ userMessage: warningMessage });
+      return c.json<Response>(warningResponse("Error: Content-Type must be multipart/form-data"));
     }
 
     const formData = await c.req.formData();
@@ -52,12 +52,11 @@ export const wordsmithHandler = async (c: Context) => {
     });
 
     if (!inputParsed.success) {
-      const warningMessage = `Error: Invalid input.\n${inputParsed.error.message}`;
-      console.warn("[RESPONSE]", warningMessage);
-      return c.json<Response>({ userMessage: warningMessage });
+      return c.json<Response>(warningResponse(`Error: Invalid input.\n${inputParsed.error.message}`));
     }
 
     const { prompt, user, options } = inputParsed.data;
+    const chatId = getUserChatId(user);
 
     const imageFile = formData.get("image") as File | null;
     const imageBuffer: Buffer | undefined = imageFile ? Buffer.from(await imageFile.arrayBuffer()) : undefined;
@@ -70,13 +69,17 @@ export const wordsmithHandler = async (c: Context) => {
     ].filter(isDefined);
 
     const data = await generateText({
-      model: poe("Claude-Haiku-4.5"),
+      model: poe("Claude-Sonnet-4.5"),
       messages: [{ role: "user" as const, content: userMessageContent }],
       system: getSystemPrompt(options, user),
       tools: {
-        [sendResultToolName]: sendResult(async ({ userMessage }) => {
-          console.log(`[USER MSG] ${userMessage}`);
-        }),
+        [sendMessageToolName]: sendMessage(async ({ userMessage }) => {
+          console.log(`[MESSAGE] ${userMessage}`);
+        }, chatId),
+        [sendResultToolName]: sendResult(async ({ userMessage, resultClipboard }) => {
+          console.log(`[RESULT] ${userMessage}`);
+          console.log(`[CLIPBOARD] ${resultClipboard}`);
+        }, chatId),
         [reasoningToolName]: reasoningTool(async ({ title, details }) => {
           console.log(`[REASONING] ${title}\n${details}`);
         }),
@@ -90,15 +93,12 @@ export const wordsmithHandler = async (c: Context) => {
     const result = allToolCalls.find((call) => call.toolName === sendResultToolName)?.input;
 
     if (!result) {
-      const warningMessage = `Error: No result generated. ${sendResultToolName} tool was not called.`;
-      console.warn("[RESPONSE]", warningMessage);
       console.debug(data.content);
-      return c.json<Response>({
-        userMessage: warningMessage,
-      });
+      return c.json<Response>(
+        warningResponse(`Error: No result generated. ${sendResultToolName} tool was not called.`)
+      );
     }
 
-    console.log("[GENERATED]", result.resultClipboard);
     return c.json<Response>({
       clipboard: result.resultClipboard,
       userMessage: result.userMessage,
@@ -112,6 +112,20 @@ export const wordsmithHandler = async (c: Context) => {
     return c.json({ error: errorMessage }, 500);
   }
 };
+
+const warningResponse = (message: string): Response => {
+  console.warn("[RESPONSE]", message);
+  return { userMessage: message };
+};
+
+function getUserChatId(user: string): string | undefined {
+  switch (user) {
+    case "Danilo":
+      return "30318273";
+    default:
+      return undefined;
+  }
+}
 
 function getUserPrompt(options: Option[], prompt: string): string {
   const taskItems = options.map<string>((option) => {
@@ -160,60 +174,29 @@ The current date and time is ${now()}.
 </context>
 <language>
 When communication with ${user} you always use English.
-  <details language="de">Use High German as written in Switzerland (Hochdeutsch with Swiss spelling).</details>
-  <details language="de-CH">
-    Use Swiss German as spoken in Switzerland.
-    
-    **Authenticity:** The primary goal is to replicate the user's exact personal style. This is more important than adhering to any standardized Swiss German grammar.
-    **Tone:** The tone must be friendly, direct, and informal.
-    **Emojis:** Use emojis where appropriate to match the friendly and informal tone.
-    
-    Key vocabulary (always use these forms):
-    - ich → i, wir → mir, unser/e → eusi
-    - nicht → nid, nicht mehr → nümm
-    - es → es/s (use "s" as contraction: s het, s goht)
-    - ist → isch
-    - haben → hend (plural) / han (singular)
-    - gehen → gönd (plural) / goh (singular)
-    - kommen → chöme, dort → dort
-    - Jahr → johr, Woche → wuche, viel → vil
-    - auch → au, schon → scho, zurück → zrugg
-    - Kunde → chund, Mittagessen → zmittag
-    - Uhr → -i suffix (e.g., am 4i = um 4 Uhr)
-    - weil → will, dass → dass
-    
-    Grammar rules:
-    - Use Perfect Tense for past (e.g., i bin gsi, mir hend plant), avoid simple past
-    - Past participles often end in -et/-ed: kündet, akünded, gschaffet
-    - Irregular forms: gha (gehabt), gsi (gewesen), cho (gekommen)
-    - Use "z" before infinitives: zum eusi vollzitjobs an nagel z hänke
-    - Common contractions: s = es, wenni = wenn ich, gfallts = gefällt es, gits = gibt es
-    - Prefer informal word order, can start with non-subject
-    
-    Common phrases:
-    - Liebi Grüess (friendly closing)
-    - en Guete (enjoy your meal)
-    - ume si (to be around)
-    - nid zwäg si (not feeling well)
-    - vo dem her (therefore)
-    - emel (at least/anyway)
-    - im Ahschluss (afterwards)
-    - in Bahnhofsnöchi (near station)
-    - es goht scho besser (it's getting better)
-  </details>
-  <details language="zh">Use Mandarin Chinese as spoken in Beijing.</details>
-  <details language="zh">Use Cantonese as spoken in Hong Kong. Provide Jyutping romanization for ${user}.</details>
-  <details language="id">Use Bahasa Indonesia as spoken in Bali.</details>
 </language>
-<output>
-You MUST use the ${sendResultToolName} tool to deliver the final user message.
+<progress tool="${sendMessageToolName}">
+Use the ${sendMessageToolName} tool to keep ${user} informed during task execution:
+- Acknowledge receipt: Confirm understanding of the request
+- Share progress: Update on complex or multi-step operations
+- Ask clarifying questions: When input is ambiguous or incomplete
+- Provide feedback: Note interesting findings or considerations
 
+Keep messages brief, natural, and conversational. Use this tool between other operations, not for the final result.
+</progress>
+<output tool="${sendResultToolName}">
+You MUST use the ${sendResultToolName} tool to deliver the final user message.
+1. Compose the clipboard content (if applicable, otherwise leave empty).
+2. Leave a user message for ${user}.
+  - The user message can mention the clipboard, provide a summary or translation/romanization if relevant.
+</output>
+<reasoning tool="${reasoningToolName}">
 CRITICAL: Do NOT use the ${reasoningToolName} tool unless:
-1. You see explicit instructions in the <tasks> section telling you to use it, OR
-2. The task involves truly complex linguistic decisions (multiple conflicting requirements, significant ambiguity, or critical judgment calls)
+a. You see explicit instructions in the user prompt telling you to use it, OR
+b. The task involves truly complex linguistic decisions (multiple conflicting requirements, significant ambiguity, or critical judgment calls)
 
 For standard translations, replies, and formatting tasks: proceed directly to ${sendResultToolName} without reasoning.
-</output>
+</reasoning>
 <rules>
   - Distinguish between *user messages* (communication meant for ${user}) and *text snippets* you are preparing.
   - Always provide a *user message*.
@@ -232,6 +215,55 @@ Professional Translation:
 - Keep technical terms accurate
 - When talking to the user, always use English.
 - When translating for the user from a foreign language, assume they want it in English.
+
+<details language="de">Use High German as written in Switzerland (Hochdeutsch with Swiss spelling).</details>
+<details language="de-CH">
+  Use Swiss German as spoken in Switzerland.
+  
+  **Authenticity:** The primary goal is to replicate the user's exact personal style. This is more important than adhering to any standardized Swiss German grammar.
+  **Tone:** The tone must be friendly, direct, and informal.
+  **Emojis:** Use emojis where appropriate to match the friendly and informal tone.
+  
+  Key vocabulary (always use these forms):
+  - ich → i, wir → mir, unser/e → eusi
+  - nicht → nid, nicht mehr → nümm
+  - es → es/s (use "s" as contraction: s het, s goht)
+  - ist → isch
+  - haben → hend (plural) / han (singular)
+  - gehen → gönd (plural) / goh (singular)
+  - kommen → chöme, dort → dort
+  - Jahr → johr, Woche → wuche, viel → vil
+  - auch → au, schon → scho, zurück → zrugg
+  - Kunde → chund, Mittagessen → zmittag
+  - Uhr → -i suffix (e.g., am 4i = um 4 Uhr)
+  - weil → will, dass → dass
+  
+  Grammar rules:
+  - Use Perfect Tense for past (e.g., i bin gsi, mir hend plant), avoid simple past
+  - Past participles often end in -et/-ed: kündet, akünded, gschaffet
+  - Irregular forms: gha (gehabt), gsi (gewesen), cho (gekommen)
+  - Use "z" before infinitives: zum eusi vollzitjobs an nagel z hänke
+  - Common contractions: s = es, wenni = wenn ich, gfallts = gefällt es, gits = gibt es
+  - Prefer informal word order, can start with non-subject
+  
+  Common phrases:
+  - Liebi Grüess (friendly closing)
+  - en Guete (enjoy your meal)
+  - ume si (to be around)
+  - nid zwäg si (not feeling well)
+  - vo dem her (therefore)
+  - emel (at least/anyway)
+  - im Ahschluss (afterwards)
+  - in Bahnhofsnöchi (near station)
+  - es goht scho besser (it's getting better)
+</details>
+<details language="zh">Use Mandarin Chinese as spoken in Beijing.</details>
+<details language="zh-HK">
+  Use Cantonese as spoken in Hong Kong.
+  Provide Jyutping romanization in the user message.
+  NEVER put romanization in the snippets / clipboard which are not meant for the user, but for Cantonese speakers.
+</details>
+<details language="id">Use Bahasa Indonesia as spoken in Bali.</details>
 </task>`;
 
 const replyPrompt = `<task type="reply">
