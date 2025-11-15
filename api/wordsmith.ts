@@ -82,7 +82,7 @@ export const wordsmithHandler = async (c: Context) => {
         }, chatId),
         [reasoningToolName]: reasoningTool(async ({ title, details }) => {
           console.log(`[REASONING] ${title}\n${details}`);
-        }),
+        }, chatId),
       },
       toolChoice: "required",
       stopWhen: hasToolCall(sendResultToolName),
@@ -122,6 +122,8 @@ function getUserChatId(user: string): string | undefined {
   switch (user) {
     case "Danilo":
       return "30318273";
+    case "Kian":
+      return "926261094";
     default:
       return undefined;
   }
