@@ -3,9 +3,13 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 
 import { env } from "../libs/env.ts";
+import { telegramBot } from "../libs/utils/telegram.ts";
 import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
 import { busHandler } from "./bus.ts";
 import { filenameHandler } from "./filename.ts";
+import { registerTask, startScheduler, stopScheduler } from "./scheduler.ts";
+import { summarizeHandler } from "./summarize.ts";
+import { transportDepartmentCheckHandler } from "./transportDepartmentCheckHandler.ts";
 import { wordsmithHandler } from "./wordsmith.ts";
 
 const app = new Hono();
@@ -22,7 +26,10 @@ app.get("/health", (c: Context) => {
 
 app.post("/bus", busHandler);
 app.post("/filename", filenameHandler);
+app.post("/summarize", summarizeHandler);
 app.post("/wordsmith", wordsmithHandler);
+
+registerTask("Check Transport Department appointments", { minutes: 5 }, transportDepartmentCheckHandler);
 
 const port = parseInt(env.port, 10);
 
@@ -33,6 +40,7 @@ const server = serve(
   },
   (info: { port: number }) => {
     console.log(`Server running on http://localhost:${info.port}`);
+    startScheduler();
   }
 );
 
@@ -41,16 +49,18 @@ const server = serve(
  */
 function shutdown(signal: string) {
   console.log(`\nReceived ${signal}, shutting down gracefully...`);
+  telegramBot.stop();
+  stopScheduler();
   server.close(() => {
     console.log("Server closed");
     process.exit(0);
   });
 
-  // Force shutdown after 10 seconds
   setTimeout(() => {
+    // Force shutdown after 2 seconds
     console.error("Forced shutdown after timeout");
     process.exit(1);
-  }, 10000);
+  }, 2000);
 }
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));

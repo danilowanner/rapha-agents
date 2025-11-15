@@ -1,4 +1,5 @@
 import { startCli } from "../libs/cli/index.tsx";
+import { telegramBot } from "../libs/utils/telegram.ts";
 import { agent } from "./agent.ts";
 import { subscribeError } from "./log.ts";
 import { start } from "./scheduler.ts";
@@ -8,7 +9,6 @@ import { createBackoff } from "./utils/createBackoff.ts";
 import { getUnreadMessages } from "./utils/getUnreadMessages.ts";
 import { notify } from "./utils/notify.ts";
 import { scheduleSystemTask } from "./utils/scheduleSystemTask.ts";
-import { telegramBot } from "./utils/telegram.ts";
 
 process.on("SIGINT", async () => shutdown(ShutdownReason.SIGINT));
 process.on("SIGTERM", async () => shutdown(ShutdownReason.SIGTERM));

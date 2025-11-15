@@ -5,6 +5,7 @@ import z from "zod";
 import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
 import { reasoningTool } from "../libs/ai/reasoningTool.ts";
 import { sendMessage } from "../libs/ai/sendMessageTool.ts";
+import { getUserChatId } from "../libs/context/getUserChatId.ts";
 import { userContext } from "../libs/context/userContext.ts";
 import { env } from "../libs/env.ts";
 import { isDefined } from "../libs/utils/isDefined.ts";
@@ -117,17 +118,6 @@ const warningResponse = (message: string): Response => {
   console.warn("[RESPONSE]", message);
   return { userMessage: message };
 };
-
-function getUserChatId(user: string): string | undefined {
-  switch (user) {
-    case "Danilo":
-      return "30318273";
-    case "Kian":
-      return "926261094";
-    default:
-      return undefined;
-  }
-}
 
 function getUserPrompt(options: Option[], prompt: string): string {
   const taskItems = options.map<string>((option) => {

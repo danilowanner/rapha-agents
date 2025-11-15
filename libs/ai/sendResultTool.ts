@@ -1,8 +1,8 @@
 import { tool } from "ai";
 import { InputFile } from "grammy";
 import z from "zod";
-import { telegramBot } from "../../carousell/utils/telegram.ts";
 import { shorten } from "../utils/shorten.ts";
+import { telegramBot } from "../utils/telegram.ts";
 
 export const result = z.object({
   userMessage: z.string().min(1).max(4000).describe("The message to be sent to the user."),

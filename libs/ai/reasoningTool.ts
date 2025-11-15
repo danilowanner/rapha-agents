@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import z from "zod";
-import { telegramBot } from "../../carousell/utils/telegram.ts";
+import { telegramBot } from "../utils/telegram.ts";
 
 export const reasoning = z.object({
   title: z.string().max(120).describe("The title of the reasoning step (max 120 characters)"),

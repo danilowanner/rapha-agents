@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { shorten } from "../../libs/utils/shorten.ts";
-import { telegramBot } from "./telegram.ts";
+import { telegramBot } from "../../libs/utils/telegram.ts";
 
 const MAX_LENGTH = 600;
 
