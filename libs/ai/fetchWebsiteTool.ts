@@ -12,6 +12,21 @@ export type WebsiteContent = z.infer<typeof websiteContent>;
 
 type Handler = (content: { url: string; markdown: string; title?: string; excerpt?: string }) => Promise<void>;
 
+export const fetchWebsite = (handler: Handler) =>
+  tool({
+    description: `Fetch and extract content from a website URL. Returns clean Markdown-formatted content. Use this when you need to retrieve information from web pages.`,
+    inputSchema: websiteContent,
+    execute: async ({ url }) => {
+      try {
+        const { markdown, title, excerpt } = await fetchWebsiteContent(url);
+        await handler({ url, markdown, title, excerpt });
+        return { success: true, title, excerpt, markdown } as const;
+      } catch (err) {
+        return { success: false, error: String(err) } as const;
+      }
+    },
+  });
+
 /**
  * Fetches and extracts content from a website in Markdown format.
  */
@@ -54,18 +69,3 @@ async function fetchWebsiteContent(url: string): Promise<{ markdown: string; tit
     excerpt: article.excerpt || undefined,
   };
 }
-
-export const fetchWebsite = (handler: Handler) =>
-  tool({
-    description: `Fetch and extract content from a website URL. Returns clean Markdown-formatted content. Use this when you need to retrieve information from web pages.`,
-    inputSchema: websiteContent,
-    execute: async ({ url }) => {
-      try {
-        const { markdown, title, excerpt } = await fetchWebsiteContent(url);
-        await handler({ url, markdown, title, excerpt });
-        return { success: true, title, excerpt, contentLength: markdown.length } as const;
-      } catch (err) {
-        return { success: false, error: String(err) } as const;
-      }
-    },
-  });

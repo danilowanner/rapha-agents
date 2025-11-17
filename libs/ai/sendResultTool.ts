@@ -8,7 +8,7 @@ export const result = z.object({
   userMessage: z.string().min(1).max(4000).describe("The message to be sent to the user."),
   resultClipboard: z
     .string()
-    .max(4000)
+    .max(50000)
     .optional()
     .describe("A composed text snippet to be copied to the user's clipboard for easy access."),
 });
