@@ -27,6 +27,22 @@ Do not add comments unless absolutely necessary for clarity, prefer self-documen
 
 When exporting a function, prefer named exports over default exports. Add a JSDoc with a brief description of the function's purpose.
 
+Prefer functional programming paradigms and avoid side effects. Prefer `const` over `let` wherever possible.
+
+### File organization:
+
+1. imports
+2. constants
+3. types and interfaces
+4. main exports
+5. helper functions (if any)
+
+### Rules
+
+- Prefer one-liner if statements when possible over block statements.
+- Use early returns to reduce nesting.
+- Use array methods like map, filter, and reduce instead of for/while loops when possible
+
 ## Testing
 
 This is a proof of concept project, so do not add tests or testing frameworks.

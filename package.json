@@ -6,6 +6,7 @@
   "scripts": {
     "start-api": "exec tsx api/index.ts",
     "dev-api": "tsx watch api/index.ts",
+    "build-api": "cd api/client && vite build",
     "start-carousell": "exec tsx carousell/index.ts",
     "dev-carousell": "tsx watch carousell/index.ts",
     "tsc": "tsc --noEmit"
@@ -20,14 +21,17 @@
     "dotenv": "^17.2.2",
     "grammy": "^1.38.2",
     "hono": "^4.10.1",
-    "ink": "^4.4.1",
-    "ink-text-input": "^5.0.1",
-    "jotai": "^2.9.3",
+    "ink": "^6.5.0",
+    "ink-text-input": "^6.0.0",
+    "jotai": "^2.15.1",
     "js-yaml": "^4.1.0",
     "jsdom": "^27.2.0",
     "lowdb": "^7.0.1",
+    "markdown-it-ts": "^0.0.2-beta.4",
     "pdf-parse": "^2.4.5",
-    "react": "^18.3.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "streamdown": "^1.5.1",
     "turndown": "^7.2.2",
     "zod": "^4.1.12"
   },
@@ -36,9 +40,12 @@
     "@types/js-yaml": "^4.0.9",
     "@types/jsdom": "^27.0.0",
     "@types/node": "^24.5.2",
-    "@types/react": "^18.3.25",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
     "@types/turndown": "^5.0.6",
+    "@vitejs/plugin-react": "^5.1.1",
     "tsx": "^4.16.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vite": "^7.2.2"
   }
 }

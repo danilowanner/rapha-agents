@@ -1,14 +1,15 @@
-import { generateText, hasToolCall, type UserContent } from "ai";
+import { stepCountIs, streamText, type UserContent } from "ai";
 import type { Context } from "hono";
 import z from "zod";
 
 import { fetchWebsite } from "../libs/ai/fetchWebsiteTool.ts";
 import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
-import { sendResult } from "../libs/ai/sendResultTool.ts";
 import { getUserChatId } from "../libs/context/getUserChatId.ts";
 import { env } from "../libs/env.ts";
+import { createResponseStream } from "../libs/utils/createResponseStream.ts";
 import { fileToImageBuffers } from "../libs/utils/fileToImageBuffers.ts";
 import { fileToText } from "../libs/utils/fileToText.ts";
+import { addResponse } from "./responses/state.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
@@ -18,11 +19,10 @@ const inputSchema = z.object({
 });
 
 type Response = {
-  clipboard?: string;
-  userMessage?: string;
+  responseId?: string;
+  error?: string;
 };
 
-const sendResultToolName = "sendResult";
 const fetchWebsiteToolName = "fetchWebsite";
 
 /**
@@ -33,7 +33,7 @@ export const summarizeHandler = async (c: Context) => {
     const contentType = c.req.header("content-type") || "";
 
     if (!contentType.includes("multipart/form-data")) {
-      return c.json<Response>(warningResponse("Error: Content-Type must be multipart/form-data"));
+      return c.json<Response>(warningResponse("Error: Content-Type must be multipart/form-data"), 400);
     }
 
     const formData = await c.req.formData();
@@ -43,7 +43,7 @@ export const summarizeHandler = async (c: Context) => {
     });
 
     if (!inputParsed.success) {
-      return c.json<Response>(warningResponse(`Error: Invalid input.\n${inputParsed.error.message}`));
+      return c.json<Response>(warningResponse(`Error: Invalid input.\n${inputParsed.error.message}`), 400);
     }
 
     const { text, user } = inputParsed.data;
@@ -52,46 +52,50 @@ export const summarizeHandler = async (c: Context) => {
     const file = formData.get("file") as File | null;
 
     if (!text && !file) {
-      return c.json<Response>(warningResponse("Error: Must provide either text or file to summarize"));
+      return c.json<Response>(warningResponse("Error: Must provide either text or file to summarize"), 400);
     }
 
     console.log("[RECEIVED]", { hasText: !!text, hasFile: !!file, user });
 
     const userMessageContent = await buildUserMessageContent(text, file);
 
-    const data = await generateText({
+    const result = streamText({
       model: poe("Claude-Sonnet-4.5"),
       messages: [{ role: "user" as const, content: userMessageContent }],
       system: getSystemPrompt(user),
       tools: {
-        [sendResultToolName]: sendResult(async ({ userMessage }) => {
-          console.log(`[SUMMARY] ${userMessage}`);
-        }, chatId),
         [fetchWebsiteToolName]: fetchWebsite(async ({ url, title }) => {
           console.log(`[FETCHED] ${url} - ${title}`);
         }),
       },
       toolChoice: "auto",
-      stopWhen: hasToolCall(sendResultToolName),
+      stopWhen: stepCountIs(8),
     });
 
-    const allToolCalls = data.steps.flatMap((step) => step.toolCalls).filter((call) => !call.dynamic);
-    const result = allToolCalls.find((call) => call.toolName === sendResultToolName)?.input;
-    const agentText = data.text;
+    const responseId = addResponse(
+      createResponseStream(result.fullStream, {
+        chatId,
+        handlers: {
+          onToolCall: (chunk) => {
+            if (chunk.dynamic) return null;
+            switch (chunk.toolName) {
+              case fetchWebsiteToolName:
+                return `🌐 Reading the website ${chunk.input.url}`;
+            }
+          },
+          onToolResult: (chunk) => {
+            if (chunk.dynamic) return null;
+            switch (chunk.toolName) {
+              case fetchWebsiteToolName:
+                return `✅ Fetched page "${chunk.output.title}"`;
+            }
+          },
+        },
+      })
+    );
+    console.log(`[RESPONSE CREATED] ID: ${responseId}`);
 
-    if (result || agentText) {
-      const userMessage = result?.userMessage || agentText;
-      console.log("[RESPONSE]", userMessage);
-      return c.json<Response>({
-        userMessage,
-        clipboard: result?.resultClipboard,
-      });
-    } else {
-      console.debug(data.content);
-      return c.json<Response>(
-        warningResponse(`Error: No result generated. ${sendResultToolName} tool was not called.`)
-      );
-    }
+    return c.json<Response>({ responseId });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
     console.error("Error occurred:", errorMessage);
@@ -141,8 +145,6 @@ For each request:
 2. Analyze the content carefully
 3. Extract the key points and main ideas
 4. Create a well-structured summary that captures the essence
-
-When you have a final summary ready, use the ${sendResultToolName} tool to deliver it.
 </task>
 <summary_guidelines>
 Your summaries should:
@@ -153,20 +155,20 @@ Your summaries should:
 - Be structured logically (use bullet points or paragraphs as appropriate)
 - Preserve any critical details like numbers, dates, or names
 </summary_guidelines>
-<context>
+<fidelity_requirements>
 When you respond:
 - Audience: scientifically minded reader.
-- Tone: neutral, precise, and concise. Use bullets. Avoid tables unless asked.
+- Tone: neutral, precise, and concise. Use bullets.
 - Phone-friendly: skimmable, structured and using consistent formatting.
 - Do not omit crucial caveats or uncertainties. If unsure, say so.
-- If content is already concise and to the point: keep all key information intact and do not omit details unless redundant.
-- If content is very long or complex: propose a plan to process in chunks.
-</context>
-<output tool="${sendResultToolName}">
-Use the ${sendResultToolName} tool to deliver the final summary.
-- Set resultClipboard to the complete summary in markdown
-- Add a quick userMessage in plain text to display to the user. It should be a brief confirmation and overview of the summary.
-</output>
+CRITICAL: Stay faithful to the source material.
+- DO NOT add information, context, or explanations not present in the source
+- DO NOT embellish or expand on points beyond what is explicitly stated
+- DO NOT insert background information, definitions, or elaborations unless they appear in the source
+- If the source is already concise, preserve its brevity—do not artificially expand it
+- Quote directly when precision matters; paraphrase only to compress, never to add
+- If asked to summarize something that is already minimal, acknowledge this and present it as-is
+</fidelity_requirements>
 <output-format>
 (in this exact order)
 1) High-level summary (3–5 bullet points, ≤200 words total).
@@ -189,6 +191,6 @@ Use the ${sendResultToolName} tool to deliver the final summary.
 }
 
 const warningResponse = (message: string): Response => {
-  console.warn("[RESPONSE]", message);
-  return { userMessage: message };
+  console.warn("[ERROR]", message);
+  return { error: message };
 };

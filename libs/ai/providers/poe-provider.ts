@@ -15,6 +15,7 @@ type ModelId =
   | "Gemini-2.5-Flash-Lite"
   | "Gemini-2.5-Pro"
   | "Gemini-2.5-Mini"
+  | "Gemini-3.0-Pro"
   | "Claude-Sonnet-4" // ✅ tool calling
   | "Claude-Sonnet-4-Reasoning"
   | "Claude-Opus-4.1" // ✅ tool calling

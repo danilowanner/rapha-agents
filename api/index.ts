@@ -1,12 +1,17 @@
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import type { Context } from "hono";
 import { Hono } from "hono";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { env } from "../libs/env.ts";
 import { telegramBot } from "../libs/utils/telegram.ts";
 import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
 import { busHandler } from "./bus.ts";
 import { filenameHandler } from "./filename.ts";
+import { responseResultHandler } from "./responses/result.ts";
+import { responseViewHandler } from "./responses/view.tsx";
 import { registerTask, startScheduler, stopScheduler } from "./scheduler.ts";
 import { summarizeHandler } from "./summarize.ts";
 import { transportDepartmentCheckHandler } from "./transportDepartmentCheckHandler.ts";
@@ -14,15 +19,21 @@ import { wordsmithHandler } from "./wordsmith.ts";
 
 const app = new Hono();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+app.use(
+  "/assets/*",
+  serveStatic({
+    root: join(__dirname, "build"),
+  })
+);
+app.get("/", (c: Context) => c.json({ message: "Hello, World!" }));
+app.get("/health", (c: Context) => c.json({ status: "ok" }));
+app.get("/responses/view/:id", responseViewHandler);
+app.get("/responses/result/:id", responseResultHandler);
+
 app.use("*", authHeaderMiddleware);
-
-app.get("/", (c: Context) => {
-  return c.json({ message: "Hello, World!" });
-});
-
-app.get("/health", (c: Context) => {
-  return c.json({ status: "ok" });
-});
 
 app.post("/bus", busHandler);
 app.post("/filename", filenameHandler);
