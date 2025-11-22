@@ -40,7 +40,7 @@ app.post("/filename", filenameHandler);
 app.post("/summarize", summarizeHandler);
 app.post("/wordsmith", wordsmithHandler);
 
-registerTask("Check Transport Department appointments", { minutes: 5 }, transportDepartmentCheckHandler);
+registerTask("Check Transport Department appointments", { minutes: 15 }, transportDepartmentCheckHandler);
 
 const port = parseInt(env.port, 10);
 

@@ -42,18 +42,10 @@ export async function transportDepartmentCheckHandler(): Promise<void> {
 
     if (dateChanged) {
       lastAvailableDate = latestDate;
-      await notifyDanilo(
-        `🚗 Transport Department Update!\n\n` +
-          `New date opened: ${latestDate}\n` +
-          `Available on ${latestDate}: ${slotsOnLatestDate ? "✅ Yes" : "❌ No"}\n` +
-          `Total dates available: ${totalDates}`
-      );
+      if (slotsOnLatestDate)
+        await notifyDanilo(`🚗 Transport Department Update!\n\n` + `✅ New date opened with slots: ${latestDate}`);
     } else if (hasAvailableSlots) {
-      await notifyDanilo(
-        `🚗 Transport Department slots available!\n\n` +
-          `✅ Slots found on one or more dates\n` +
-          `Total dates available: ${totalDates}`
-      );
+      await notifyDanilo(`🚗 Transport Department slots available!\n\n` + `✅ Slots found on one or more dates`);
     }
 
     console.log(`TD check complete - Available: ${hasAvailableSlots}, Latest: ${latestDate}`);
