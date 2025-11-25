@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import z from "zod";
 
 import { fetchWebsite } from "../libs/ai/fetchWebsiteTool.ts";
+import { fetchYoutubeTranscript } from "../libs/ai/fetchYoutubeTranscriptTool.ts";
 import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
 import { getUserChatId } from "../libs/context/getUserChatId.ts";
 import { env } from "../libs/env.ts";
@@ -23,6 +24,7 @@ type Response = {
   error?: string;
 };
 
+const fetchYoutubeTranscriptToolName = "fetchYoutubeTranscript";
 const fetchWebsiteToolName = "fetchWebsite";
 
 /**
@@ -64,6 +66,9 @@ export const summarizeHandler = async (c: Context) => {
       messages: [{ role: "user" as const, content: userMessageContent }],
       system: getSystemPrompt(user),
       tools: {
+        [fetchYoutubeTranscriptToolName]: fetchYoutubeTranscript(async ({ url, title }) => {
+          console.log(`[FETCHED] ${url} - ${title}`);
+        }),
         [fetchWebsiteToolName]: fetchWebsite(async ({ url, title }) => {
           console.log(`[FETCHED] ${url} - ${title}`);
         }),
@@ -80,7 +85,9 @@ export const summarizeHandler = async (c: Context) => {
             if (chunk.dynamic) return null;
             switch (chunk.toolName) {
               case fetchWebsiteToolName:
-                return `🌐 Reading the website ${chunk.input.url}`;
+                return `🌐 Reading the website \`${chunk.input.url}\``;
+              case fetchYoutubeTranscriptToolName:
+                return `▶️ Fetching transcript from YouTube video \`${chunk.input.url}\``;
             }
           },
           onToolResult: (chunk) => {
@@ -88,6 +95,8 @@ export const summarizeHandler = async (c: Context) => {
             switch (chunk.toolName) {
               case fetchWebsiteToolName:
                 return `✅ Fetched page "${chunk.output.title}"`;
+              case fetchYoutubeTranscriptToolName:
+                return `✅ Fetched transcript "${chunk.output.title}"`;
             }
           },
         },
