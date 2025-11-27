@@ -3,13 +3,13 @@ type Props = {
   title: string;
 };
 
-export const Layout = ({ children, title }: Props) => (
+export const Document = ({ children, title }: Props) => (
   <html lang="en">
     <head>
       <meta charSet="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>{title}</title>
-      <script src="/assets/main.js" />
+      <script src="/assets/main.js" defer />
     </head>
     <body>{children}</body>
   </html>

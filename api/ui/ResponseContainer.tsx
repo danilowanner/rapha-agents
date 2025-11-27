@@ -1,18 +1,13 @@
 export const rootElementId = "response-root";
-export const contentPlaceholder = "{CONTENT_PLACEHOLDER}";
 
-export const ResponseContainer = () => {
+type Props = {
+  id?: string;
+};
+
+export const ResponseContainer = ({ id }: Props) => {
   return (
-    <>
-      <div className="response markdown-content">
-        <div id={rootElementId} />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.Rapha.init()`,
-          }}
-        />
-        {contentPlaceholder}
-      </div>
-    </>
+    <div className="response markdown-content">
+      <div id={rootElementId} data-response-id={id} />
+    </div>
   );
 };
