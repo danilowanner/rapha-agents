@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "start-api": "exec tsx api/index.ts",
-    "dev-api": "tsx watch api/index.ts",
+    "start-api-dev": "tsx watch api/index.ts",
     "build-api": "cd api/client && vite build",
     "start-carousell": "exec tsx carousell/index.ts",
-    "dev-carousell": "tsx watch carousell/index.ts",
+    "start-carousell-dev": "tsx watch carousell/index.ts",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {

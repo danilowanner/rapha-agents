@@ -1,0 +1,20 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "start-api-dev",
+      "problemMatcher": [],
+      "icon": { "color": "terminal.ansiCyan", "id": "globe" },
+      "label": "Run start-api-dev (watch mode)",
+      "detail": "Run API in development mode (watch mode)"
+    },
+    {
+      "type": "shell",
+      "command": "npm run build-api -- -w",
+      "icon": { "color": "terminal.ansiCyan", "id": "build" },
+      "label": "Run build-api (watch mode)",
+      "detail": "Run API client build in watch mode"
+    }
+  ]
+}

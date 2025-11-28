@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { deleteResponse, getResponseResult } from "./state.ts";
+import { getResponseResult } from "./state.ts";
 
 /**
  * Returns the complete result after the stream finishes
@@ -13,6 +13,5 @@ export const responseResultHandler = async (c: Context) => {
     return c.json({ error: "Response not found" }, 404);
   }
 
-  deleteResponse(id);
   return c.json({ result });
 };

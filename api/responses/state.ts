@@ -1,13 +1,21 @@
 import { EventEmitter } from "node:events";
 
-const responses = new Map<string, ResponseBuffer>();
+const MAX_CACHED_RESPONSES = 20;
+
+interface ResponseEntry {
+  buffer: ResponseBuffer;
+  createdAt: Date;
+}
+
+const responses = new Map<string, ResponseEntry>();
 
 /**
  * Adds a new response stream and returns a unique ID.
  */
 export const addResponse = (stream: ReadableStream<string>): string => {
   const id = crypto.randomUUID();
-  responses.set(id, new ResponseBuffer(stream));
+  responses.set(id, { buffer: new ResponseBuffer(stream), createdAt: new Date() });
+  pruneOldResponses();
   return id;
 };
 
@@ -15,7 +23,7 @@ export const addResponse = (stream: ReadableStream<string>): string => {
  * Creates a new ReadableStream for the response.
  */
 export const getResponseStream = (id: string): ReadableStream<string> | null => {
-  return responses.get(id)?.createStream() ?? null;
+  return responses.get(id)?.buffer.createStream() ?? null;
 };
 
 /**
@@ -29,7 +37,14 @@ export const hasResponse = (id: string): boolean => {
  * Returns the full buffered content when stream completes.
  */
 export const getResponseResult = async (id: string): Promise<string | null> => {
-  return responses.get(id)?.getResult() ?? null;
+  return responses.get(id)?.buffer.getResult() ?? null;
+};
+
+/**
+ * Returns the creation date of a response.
+ */
+export const getResponseCreatedAt = (id: string): Date | null => {
+  return responses.get(id)?.createdAt ?? null;
 };
 
 /**
@@ -37,6 +52,15 @@ export const getResponseResult = async (id: string): Promise<string | null> => {
  */
 export const deleteResponse = (id: string): void => {
   responses.delete(id);
+};
+
+const pruneOldResponses = (): void => {
+  if (responses.size <= MAX_CACHED_RESPONSES) return;
+
+  const entries = [...responses.entries()].sort(([, a], [, b]) => a.createdAt.getTime() - b.createdAt.getTime());
+
+  const toRemove = entries.slice(0, responses.size - MAX_CACHED_RESPONSES);
+  toRemove.forEach(([id]) => responses.delete(id));
 };
 
 class ResponseBuffer extends EventEmitter {
