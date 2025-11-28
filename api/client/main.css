@@ -80,3 +80,38 @@ a {
   border-top: 1px solid #ddd;
   margin: 2rem 0;
 }
+.markdown-content .table-wrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: max-content;
+  font-size: 0.9em;
+}
+.markdown-content th,
+.markdown-content td {
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+  white-space: nowrap;
+}
+.markdown-content th {
+  background: #f5f7fa;
+  font-weight: 600;
+  color: #444;
+  border-bottom: 2px solid #d0d5dd;
+}
+.markdown-content tr:hover {
+  background: #f9fafb;
+}
+.markdown-content td:first-child,
+.markdown-content th:first-child {
+  padding-left: 0.5rem;
+}
+.markdown-content td:last-child,
+.markdown-content th:last-child {
+  padding-right: 0.5rem;
+}

@@ -41,11 +41,25 @@ Hono-based API server with scheduled tasks:
 - **wordsmith.ts**: Wordsmith (writing) endpoint
 - **transportDepartmentCheckHandler.ts**: Scheduled task for checking transport department appointments
 - **scheduler.ts**: Task scheduler (registerTask, startScheduler, stopScheduler)
-- **responses/result.ts**: Result response handler
-- **responses/state.ts**: Response state management
-- **responses/view.tsx**: Response view renderer
-- **ui/Layout.tsx**: UI layout component
-- **ui/ResponseContainer.tsx**: Response container component
+
+**Response streaming (responses/):**
+
+- **state.ts**: ResponseBuffer class using EventEmitter for buffered stream replay. Exports addResponse, getResponseStream, getResponseResult, hasResponse, deleteResponse
+- **md.ts**: Streams markdown chunks as plain text for client consumption
+- **result.ts**: Returns complete result after stream finishes
+- **view.tsx**: Response view renderer with SSR
+
+**UI components (ui/):**
+
+- **Document.tsx**: HTML document wrapper for SSR
+- **MarkdownStream.tsx**: React component that fetches and renders streaming markdown using markdown-it
+- **ResponseContainer.tsx**: Container component with root element ID
+
+**Client (client/):**
+
+- **main.tsx**: Client-side React hydration entry point
+- **main.css**: Client styles
+- **vite.config.ts**: Vite bundler config
 
 #### carousell/
 
@@ -147,8 +161,10 @@ When exporting a function, prefer named exports over default exports. Add a JSDo
 1. imports
 2. constants
 3. types and interfaces
-4. main exports
-5. helper functions (if any)
+4. main exports (components, functions)
+5. private helper functions
+
+IMPORTANT: Follow the order strictly. Main exports and higher-level constructs should be before private helper functions.
 
 ### Rules
 

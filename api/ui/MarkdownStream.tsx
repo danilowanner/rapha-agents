@@ -1,13 +1,14 @@
 import markdownIt from "markdown-it-ts";
-import { useEffect, useState } from "react";
+import morphdom from "morphdom";
+import { useEffect, useRef } from "react";
 
-const md = markdownIt({ stream: true });
+const md = markdownIt();
 
 export function MarkdownStream({ responseId }: { responseId: string }) {
-  const [html, setHtml] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let markdown = "";
+    let content = "";
 
     const fetchStream = async (retry = true): Promise<void> => {
       try {
@@ -21,8 +22,12 @@ export function MarkdownStream({ responseId }: { responseId: string }) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          markdown += decoder.decode(value, { stream: true });
-          setHtml(md.render(markdown));
+          content += decoder.decode(value, { stream: true });
+          const html = wrapTables(md.render(content));
+
+          if (containerRef.current) {
+            morphdom(containerRef.current, `<div>${html}</div>`, { childrenOnly: true });
+          }
         }
       } catch (error) {
         console.error("Error fetching markdown stream:", error);
@@ -33,5 +38,8 @@ export function MarkdownStream({ responseId }: { responseId: string }) {
     void fetchStream();
   }, [responseId]);
 
-  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div ref={containerRef} />;
 }
+
+const wrapTables = (html: string): string =>
+  html.replace(/<table>/g, '<div class="table-wrapper"><table>').replace(/<\/table>/g, "</table></div>");
