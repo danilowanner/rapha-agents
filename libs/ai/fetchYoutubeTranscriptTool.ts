@@ -1,9 +1,10 @@
-import { generateText, tool } from "ai";
-import { Innertube, UniversalCache } from "youtubei.js";
+import { tool } from "ai";
+import { Innertube, Parser, UniversalCache } from "youtubei.js";
 import z from "zod";
 
 import { env } from "../env.ts";
-import { createPoeAdapter } from "./providers/poe-provider.ts";
+
+Parser.setParserErrorHandler(() => {});
 
 export const youtubeTranscript = z.object({
   url: z.url().describe("The URL of the YouTube video to fetch transcript from"),
@@ -12,9 +13,15 @@ export const youtubeTranscript = z.object({
 export type YoutubeTranscript = z.infer<typeof youtubeTranscript>;
 
 type Handler = (content: Content) => Promise<void>;
-type Content = { url: string; transcript: string; title?: string; author?: string; channel?: string };
-
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+type Content = {
+  url: string;
+  transcript: string;
+  title?: string;
+  author?: string;
+  channel?: string;
+  date?: string;
+  relative_date?: string;
+};
 
 const innertube = {
   instance: null as Innertube | null,
@@ -36,9 +43,9 @@ export const fetchYoutubeTranscript = (handler: Handler) =>
     inputSchema: youtubeTranscript,
     execute: async ({ url }) => {
       try {
-        const { transcript, title, author, channel } = await fetchAndPolishTranscript(url);
-        await handler({ url, transcript, title, author, channel });
-        return { success: true, title, transcript, author, channel } as const;
+        const { transcript, title, author, channel, date, relative_date } = await fetchAndPolishTranscript(url);
+        await handler({ url, transcript, title, author, channel, date, relative_date });
+        return { success: true, title, transcript, author, channel, date, relative_date } as const;
       } catch (err) {
         return { success: false, error: String(err) } as const;
       }
@@ -66,20 +73,16 @@ async function fetchAndPolishTranscript(url: string): Promise<Content> {
       throw new Error("No transcript segments found");
     }
 
-    const rawTranscript = segments.map((segment: any) => segment.snippet.text).join(" ");
-    const { text: polishedTranscript } = await generateText({
-      model: poe("Gemini-2.5-Flash"),
-      system:
-        "You are a helpful assistant that polishes YouTube transcripts. Fix grammar, punctuation, and formatting. Remove filler words. Keep the content accurate. Return ONLY the polished transcript.",
-      prompt: `Please polish the following YouTube transcript:\n\n${rawTranscript}`,
-    });
+    const transcript = segments.map((segment: any) => segment.snippet.text).join(" ");
 
     return {
       url,
-      transcript: polishedTranscript,
+      transcript,
       title: info.basic_info.title,
       author: info.basic_info.author,
       channel: info.basic_info.channel?.name,
+      date: info.primary_info?.published?.toString(),
+      relative_date: info.primary_info?.relative_date?.toString(),
     };
   } catch (e) {
     throw new Error(`Failed to get transcript: ${e instanceof Error ? e.message : String(e)}`);
