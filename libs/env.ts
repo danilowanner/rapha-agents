@@ -14,4 +14,7 @@ export const env = {
   get port() {
     return z.string().default("3000").parse(process.env.PORT);
   },
+  get youtubeCookie() {
+    return z.string().optional().parse(process.env.YOUTUBE_COOKIE);
+  },
 };

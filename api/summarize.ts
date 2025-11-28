@@ -94,9 +94,11 @@ export const summarizeHandler = async (c: Context) => {
             if (chunk.dynamic) return null;
             switch (chunk.toolName) {
               case fetchWebsiteToolName:
-                return `✅ Fetched page "${chunk.output.title}"`;
+                const pageTitle: string = chunk.output.title ? `"${chunk.output.title}"` : "";
+                return `✅ Fetched page ${pageTitle}`;
               case fetchYoutubeTranscriptToolName:
-                return `✅ Fetched transcript "${chunk.output.title}"`;
+                const ytTitle: string = chunk.output.title ? `"${chunk.output.title}"` : "";
+                return `✅ Fetched transcript ${ytTitle}`;
             }
           },
         },

@@ -1,5 +1,5 @@
 import { generateText, tool } from "ai";
-import { Innertube } from "youtubei.js";
+import { Innertube, UniversalCache } from "youtubei.js";
 import z from "zod";
 
 import { env } from "../env.ts";
@@ -15,6 +15,20 @@ type Handler = (content: Content) => Promise<void>;
 type Content = { url: string; transcript: string; title?: string; author?: string; channel?: string };
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+
+const innertube = {
+  instance: null as Innertube | null,
+  async get(): Promise<Innertube> {
+    if (!this.instance)
+      this.instance = await Innertube.create({
+        retrieve_player: false,
+        generate_session_locally: true,
+        cache: new UniversalCache(true, "./.cache/youtube"),
+        cookie: env.youtubeCookie,
+      });
+    return this.instance;
+  },
+};
 
 export const fetchYoutubeTranscript = (handler: Handler) =>
   tool({
@@ -35,7 +49,7 @@ export const fetchYoutubeTranscript = (handler: Handler) =>
  * Fetches and polishes the transcript of a YouTube video.
  */
 async function fetchAndPolishTranscript(url: string): Promise<Content> {
-  const youtube = await Innertube.create();
+  const youtube = await innertube.get();
 
   // Extract video ID from URL
   const videoId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/)?.[1];
@@ -43,9 +57,8 @@ async function fetchAndPolishTranscript(url: string): Promise<Content> {
     throw new Error("Invalid YouTube URL");
   }
 
-  const info = await youtube.getInfo(videoId);
-
   try {
+    const info = await youtube.getInfo(videoId);
     const transcriptData = await info.getTranscript();
     const segments = transcriptData?.transcript?.content?.body?.initial_segments;
 
