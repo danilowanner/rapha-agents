@@ -1,5 +1,7 @@
 import type { TextStreamPart, ToolSet } from "ai";
 import { InputFile } from "grammy";
+
+import { extractFile } from "../ai/createFileTool.ts";
 import { shorten } from "./shorten.ts";
 import { telegramBot } from "./telegram.ts";
 
@@ -7,10 +9,16 @@ type ToolCallChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { typ
 type ToolResultChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-result" }>;
 type ErrorChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "error" }>;
 
+type MarkerResult = { marker: string };
+type HandlerResult = string | MarkerResult | null;
+
+const isMarkerResult = (result: HandlerResult): result is MarkerResult =>
+  result !== null && typeof result === "object" && "marker" in result;
+
 type StreamHandlers<TOOLS extends ToolSet> = {
-  onToolCall?: (chunk: ToolCallChunk<TOOLS>) => string | null;
-  onToolResult?: (chunk: ToolResultChunk<TOOLS>) => string | null;
-  onError?: (chunk: ErrorChunk<TOOLS>) => string | null;
+  onToolCall?: (chunk: ToolCallChunk<TOOLS>) => HandlerResult;
+  onToolResult?: (chunk: ToolResultChunk<TOOLS>) => HandlerResult;
+  onError?: (chunk: ErrorChunk<TOOLS>) => HandlerResult;
 };
 
 type ResponseStreamOptions<TOOLS extends ToolSet> = {
@@ -27,57 +35,66 @@ export const createResponseStream = <TOOLS extends ToolSet>(
   options: ResponseStreamOptions<TOOLS>
 ): ReadableStream<string> => {
   const { handlers, chatId } = options;
-  const textChunks: string[] = [];
+  const chunks: string[] = [];
 
   const notifyTelegram = async (message: string) => {
     if (!chatId) return;
-    await telegramBot.api.sendMessage(chatId, message).catch((e) => console.error("Telegram error:", e));
+    await telegramBot.api
+      .sendMessage(chatId, message, { parse_mode: "MarkdownV2" })
+      .catch((e) => console.error("Telegram error:", e));
   };
 
   return new ReadableStream<string>({
     async start(controller) {
+      const enqueue = (text: string) => {
+        controller.enqueue(text);
+        if (chatId) chunks.push(text);
+      };
       try {
         for await (const chunk of fullStream) {
           switch (chunk.type) {
             case "text-delta":
-              if (chunk.text) {
-                controller.enqueue(chunk.text);
-                if (chatId) textChunks.push(chunk.text);
-              }
+              if (chunk.text) enqueue(chunk.text);
               break;
 
             case "tool-call": {
-              const message = handlers.onToolCall?.(chunk);
-              if (message) {
-                controller.enqueue(`\n\n${message}\n\n`);
-                await notifyTelegram(message);
-              }
+              const result = handlers.onToolCall?.(chunk);
+              if (!result) break;
+              const text = isMarkerResult(result) ? result.marker : result;
+              enqueue(`\n\n${text}\n\n`);
+              if (!isMarkerResult(result)) await notifyTelegram(result);
               break;
             }
 
             case "tool-result": {
-              const message = handlers.onToolResult?.(chunk);
-              if (message) {
-                controller.enqueue(`\n\n${message}\n\n`);
-                await notifyTelegram(message);
-              }
+              const result = handlers.onToolResult?.(chunk);
+              if (!result) break;
+              const text = isMarkerResult(result) ? result.marker : result;
+              enqueue(`\n\n${text}\n\n`);
+              if (!isMarkerResult(result)) await notifyTelegram(result);
               break;
             }
 
             case "error": {
-              const message = handlers.onError?.(chunk) ?? `\n\n⚠️ Error: ${chunk.error}\n\n`;
-              controller.enqueue(message);
-              await notifyTelegram(message);
+              const result = handlers.onError?.(chunk) ?? `⚠️ Error: ${chunk.error}`;
+              const text = isMarkerResult(result) ? result.marker : result;
+              enqueue(`\n\n${text}\n\n`);
+              if (!isMarkerResult(result)) await notifyTelegram(result);
               break;
             }
           }
         }
 
-        if (chatId && textChunks.length > 0) {
-          const fullText = textChunks.join("");
+        if (chatId && chunks.length > 0) {
+          const fullText = chunks.join("");
+          const extracted = extractFile(fullText);
+          const fileName = extracted?.name ?? "result.md";
+          const content = extracted?.result ?? fullText;
+          const caption = extracted?.description ?? shorten(content, 30);
           await telegramBot.api
-            .sendDocument(chatId, new InputFile(Buffer.from(fullText, "utf-8"), "result.md"), {
-              caption: shorten(fullText, 30),
+            .sendDocument(chatId, new InputFile(Buffer.from(content, "utf-8"), fileName), {
+              caption,
+              parse_mode: "MarkdownV2",
             })
             .catch((e) => console.error("Telegram error:", e));
         }

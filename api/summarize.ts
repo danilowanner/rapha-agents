@@ -1,10 +1,12 @@
-import { stepCountIs, streamText, type UserContent } from "ai";
+import { streamText, type UserContent } from "ai";
 import type { Context } from "hono";
 import z from "zod";
 
+import { createFile, createFileToolName, getMarker } from "../libs/ai/createFileTool.ts";
 import { fetchWebsite } from "../libs/ai/fetchWebsiteTool.ts";
 import { fetchYoutubeTranscript } from "../libs/ai/fetchYoutubeTranscriptTool.ts";
 import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
+import { stopOnDoneOrMaxSteps } from "../libs/ai/stopConditions.ts";
 import { getUserChatId } from "../libs/context/getUserChatId.ts";
 import { env } from "../libs/env.ts";
 import { createResponseStream } from "../libs/utils/createResponseStream.ts";
@@ -72,9 +74,16 @@ export const summarizeHandler = async (c: Context) => {
         [fetchWebsiteToolName]: fetchWebsite(async ({ url, title }) => {
           console.log(`[FETCHED] ${url} - ${title}`);
         }),
+        [createFileToolName]: createFile((input) => {
+          console.log(`[FILE] ${input.name}${input.description ? ` - ${input.description}` : ""}`);
+        }),
       },
       toolChoice: "auto",
-      stopWhen: stepCountIs(8),
+      stopWhen: stopOnDoneOrMaxSteps(6),
+    });
+
+    result.warnings.then((warnings) => {
+      if ((warnings?.length ?? 0) > 0) console.warn("[WARNINGS]", warnings);
     });
 
     const responseId = addResponse(
@@ -88,6 +97,8 @@ export const summarizeHandler = async (c: Context) => {
                 return `🌐 Reading the website \`${chunk.input.url}\``;
               case fetchYoutubeTranscriptToolName:
                 return `▶️ Fetching transcript from YouTube video \`${chunk.input.url}\``;
+              case createFileToolName:
+                return null;
             }
           },
           onToolResult: (chunk) => {
@@ -99,6 +110,8 @@ export const summarizeHandler = async (c: Context) => {
               case fetchYoutubeTranscriptToolName:
                 const ytTitle: string = chunk.output.title ? `"${chunk.output.title}"` : "";
                 return `✅ Fetched transcript ${ytTitle}`;
+              case createFileToolName:
+                return { marker: getMarker(chunk.output) };
             }
           },
         },
@@ -182,13 +195,22 @@ CRITICAL: Stay faithful to the source material.
 - Quote directly when precision matters; paraphrase only to compress, never to add
 - If asked to summarize something that is already minimal, acknowledge this and present it as-is
 </fidelity_requirements>
+<create-file-tool>
+You MUST use the ${createFileToolName} tool to save your summary as a file. Follow this workflow:
+1. Write your complete summary (all sections defined in output-format below)
+2. Immediately after writing, call ${createFileToolName} with:
+   - name: A descriptive, sentence-cased filename based on the content (e.g., "Climate report summary.md")
+   - description: A brief one-line description of the file contents
+   - startMarker: The exact first 50-100 characters of your summary content
+   - done: true (since this completes the task)
+</create-file-tool>
 <output-format>
 (in this exact order)
 1) High-level summary (3–5 bullet points, ≤200 words total).
 2) Critical takeaways not to miss (bullets).
 3) Detailed and structured article with headings, paragraphs and lists. Adjust length to fit all important information without being overly verbose or adding fluff. (≤2000 words)
 4) Verification status and confidence
-   - e.g., “Checked: key claims verified with [1][2] | Confidence: medium-high | Currency: up to 2025-10.”
+   - e.g., "Checked: key claims verified with [1][2] | Confidence: medium-high | Currency: up to 2025-10."
 5) If available: Source and/or Link (optional)
 </output-format>
 <citations>

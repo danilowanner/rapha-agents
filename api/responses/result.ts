@@ -7,11 +7,11 @@ import { getResponseResult } from "./state.ts";
 export const responseResultHandler = async (c: Context) => {
   console.log("[RESPONSES/RESULT]", c.req.param("id"));
   const id = c.req.param("id");
-  const result = await getResponseResult(id);
+  const file = await getResponseResult(id);
 
-  if (result === null) {
+  if (file === null) {
     return c.json({ error: "Response not found" }, 404);
   }
 
-  return c.json({ result });
+  return c.json(file);
 };

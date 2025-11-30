@@ -178,3 +178,9 @@ IMPORTANT: Follow the order strictly. Main exports and higher-level constructs s
 ## Testing
 
 This is a proof of concept project, so do not add tests or testing frameworks.
+
+### Typescript
+
+Always check for Typescript errors in the outputs and ensure type safety.
+Use strong typing and avoid `any` type.
+Use provided types from libraries whenever possible. Do not create duplicate types.

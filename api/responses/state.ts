@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { extractFile } from "../../libs/ai/createFileTool.ts";
 
 const MAX_CACHED_RESPONSES = 20;
 
@@ -33,11 +34,17 @@ export const hasResponse = (id: string): boolean => {
   return responses.has(id);
 };
 
+type FileResult = {
+  name: string;
+  description?: string;
+  result: string;
+};
+
 /**
  * Returns the full buffered content when stream completes.
  */
-export const getResponseResult = async (id: string): Promise<string | null> => {
-  return responses.get(id)?.buffer.getResult() ?? null;
+export const getResponseResult = async (id: string): Promise<FileResult | null> => {
+  return extractFile(await responses.get(id)?.buffer.getResult()) ?? null;
 };
 
 /**

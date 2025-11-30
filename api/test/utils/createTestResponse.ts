@@ -18,6 +18,7 @@ const content: UserContent = [
 - A horizontal rule
 - Two tables: one small (3 cols, 3 rows) and one wide (8+ cols) to test horizontal scrolling
 - A link and an image placeholder
+- A hidden file comment like this: <!-- FILE:{"name":"...","startMarker":"..."} -->
 
 Make the content realistic and cohesive, like a mini product changelog or feature overview.`,
   },

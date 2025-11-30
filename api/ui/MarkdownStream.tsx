@@ -23,7 +23,8 @@ export function MarkdownStream({ responseId }: { responseId: string }) {
           if (done) break;
 
           content += decoder.decode(value, { stream: true });
-          const html = wrapTables(md.render(content));
+          const cleanedContent = hideComments(content);
+          const html = wrapTables(md.render(cleanedContent));
 
           if (containerRef.current) {
             morphdom(containerRef.current, `<div>${html}</div>`, { childrenOnly: true });
@@ -43,3 +44,5 @@ export function MarkdownStream({ responseId }: { responseId: string }) {
 
 const wrapTables = (html: string): string =>
   html.replace(/<table>/g, '<div class="table-wrapper"><table>').replace(/<\/table>/g, "</table></div>");
+
+const hideComments = (markdown: string): string => markdown.replace(/<!--[\s\S]*?-->/g, "");
