@@ -10,7 +10,7 @@ interface ConversionOptions {
  * PDFs are converted page-by-page to PNG images. Direct images are returned as-is.
  */
 export async function fileToImageBuffers(file: File, options: ConversionOptions = {}): Promise<Buffer[]> {
-  const { maxPages = 10, scale = 1024 } = options;
+  const { maxPages = 10, scale = 1600 } = options;
 
   if (!file || file.size === 0) {
     throw new Error("Invalid or empty file provided");

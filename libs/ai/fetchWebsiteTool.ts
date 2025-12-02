@@ -5,7 +5,7 @@ import TurndownService from "turndown";
 import z from "zod";
 
 export const websiteContent = z.object({
-  url: z.url().describe("The URL of the website to fetch content from"),
+  url: z.url().describe("The URL of the website to fetch content from. Supports shortened URLs and redirects."),
 });
 
 export type WebsiteContent = z.infer<typeof websiteContent>;

@@ -140,7 +140,7 @@ async function buildUserMessageContent(text: string | undefined, file: File | nu
   }
   if (file) {
     const pdfText = file.type === "application/pdf" ? await fileToText(file).catch(() => null) : null;
-    const imageBuffers = await fileToImageBuffers(file, { maxPages: 5, scale: 1024 });
+    const imageBuffers = await fileToImageBuffers(file, { maxPages: 20 });
     content.push(...imageBuffers.map((buffer) => ({ type: "image" as const, image: buffer })));
     if (pdfText) content.push({ type: "text", text: `<pdf_text>${pdfText}</pdf_text>` });
   }
