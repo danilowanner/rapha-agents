@@ -126,11 +126,14 @@ Shared utilities:
 - **createResponseStream.ts**: Streaming response utilities
 - **fileToImageBuffers.ts**: File to image buffer conversion
 - **fileToText.ts**: File to text conversion
+- **formatDateTime.ts**: Formats date and time in "DD MMM YYYY, HH:MM" format
+- **formatRelativeTime.ts**: Formats relative time (e.g., "5m ago", "2h ago", "3d ago")
 - **isDefined.ts**: Type guard for defined values
 - **jsonCodec.ts**: JSON encoding/decoding utilities
 - **listCodec.ts**: List codec utilities
 - **shorten.ts**: Text shortening utility
 - **streamToString.ts**: Stream to string conversion
+- **XmlBuilder.ts**: Simple XML builder class for readable XML generation with automatic escaping
 
 #### libs/cli
 
