@@ -123,6 +123,7 @@ User context management for personalized agent interactions:
 Shared utilities:
 
 - **telegram.ts**: Telegram bot instance using Grammy framework
+- **markdownToTelegramHtml.ts**: Converts Markdown to Telegram-compatible HTML, stripping unsupported tags
 - **createResponseStream.ts**: Streaming response utilities
 - **fileToImageBuffers.ts**: File to image buffer conversion
 - **fileToText.ts**: File to text conversion
