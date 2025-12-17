@@ -12,6 +12,8 @@ import { env } from "../libs/env.ts";
 import { createResponseStream } from "../libs/utils/createResponseStream.ts";
 import { fileToImageBuffers } from "../libs/utils/fileToImageBuffers.ts";
 import { fileToText } from "../libs/utils/fileToText.ts";
+import { formatDateTime } from "../libs/utils/formatDateTime.ts";
+import { getErrorMessage } from "../libs/utils/getErrorMessage.ts";
 import { addResponse } from "./responses/state.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
@@ -80,10 +82,20 @@ export const summarizeHandler = async (c: Context) => {
       },
       toolChoice: "auto",
       stopWhen: stopOnDoneOrMaxSteps(6),
+      onStepFinish: ({ content }) => {
+        const toolErrors = content.filter((part) => part.type === "tool-error");
+        if (toolErrors.length > 0)
+          toolErrors.forEach((content) => {
+            console.error(`[TOOL ERROR] ${content.toolName}: ${getErrorMessage(content.error)}`);
+          });
+      },
     });
 
     result.warnings.then((warnings) => {
       if ((warnings?.length ?? 0) > 0) console.warn("[WARNINGS]", warnings);
+    });
+    result.finishReason.then((reason) => {
+      console.log("[FINISHED]", reason);
     });
 
     const responseId = addResponse(
@@ -94,9 +106,9 @@ export const summarizeHandler = async (c: Context) => {
             if (chunk.dynamic) return null;
             switch (chunk.toolName) {
               case fetchWebsiteToolName:
-                return `🌐 Reading the website \`${chunk.input.url}\``;
+                return `🌐 Reading the website ${chunk.input.url}`;
               case fetchYoutubeTranscriptToolName:
-                return `▶️ Fetching transcript from YouTube video \`${chunk.input.url}\``;
+                return `▶️ Fetching transcript from YouTube video ${chunk.input.url}`;
               case createFileToolName:
                 return null;
             }
@@ -128,7 +140,7 @@ export const summarizeHandler = async (c: Context) => {
 };
 
 async function buildUserMessageContent(text: string | undefined, file: File | null): Promise<UserContent> {
-  const content: UserContent = [{ type: "text", text: `Please summarize the content below.` }];
+  const content: UserContent = [{ type: "text", text: `Please summarize the content below and save as a file.` }];
 
   if (text) {
     const urlPattern = /^https?:\/\/.+/i;
@@ -149,14 +161,12 @@ async function buildUserMessageContent(text: string | undefined, file: File | nu
 }
 
 function getSystemPrompt(user: string): string {
-  const now = new Date().toISOString();
-
   return `<role>
 You are my mobile-friendly, scientifically rigorous summarization assistant helping ${user} understand and condense information.
 Given a document, PDF, image, article text, or URL, produce a concise summary that captures all crucial information without unnecessary verbosity, and background-check key claims.
 </role>
 <context>
-TODAY: ${now}
+TODAY: ${formatDateTime()}.
 CRITICAL: Your training data has a knowledge cutoff, but the current date above is accurate and provided by the system. Dates like "Nov 2025" are NOT typos or errors—they are real and current. Trust all dates provided by tools (e.g., YouTube publish dates) as accurate.
 When content says "last week", "yesterday", etc., calculate relative to the source's publish date.
 </context>
@@ -167,11 +177,26 @@ Your task is to create clear, concise, and accurate summaries of the provided co
 - Files (PDFs, images) to analyze and summarize
 
 For each request:
-1. If the text contains a URL, use the ${fetchWebsiteToolName} tool to retrieve the content first
-2. Analyze the content carefully
-3. Extract the key points and main ideas
-4. Create a well-structured summary that captures the essence
+1. Retrieve: If the text contains a URL, use the ${fetchWebsiteToolName} tool to retrieve the content first
+2. Summarize: Analyze, extract the key points and main ideas, create a well-structured summary that captures the essence
+3. Save: Keep the summary as a markdown file using the ${createFileToolName} tool
 </task>
+<output-format>
+(in this exact order)
+1) High-level summary (3–5 bullet points, ≤200 words total).
+2) Critical takeaways not to miss (bullets).
+3) Detailed and structured article with headings, paragraphs and lists. Adjust length to fit all important information without being overly verbose or adding fluff (up to 10min read).
+4) Confidence and credibility
+5) If available: Source and/or Link (optional)
+</output-format>
+<create-file-tool>
+You MUST use the ${createFileToolName} tool to save your summary as a file.
+Immediately after writing, call ${createFileToolName} with:
+  - name: A descriptive, sentence-cased filename based on the content (e.g., "Climate report summary.md")
+  - description: A brief one-line description of the file contents
+  - startMarker: The exact first 50-100 characters of your summary content
+  - done: true (since this completes the task)
+</create-file-tool>
 <summary_guidelines>
 Your summaries should:
 - Be concise but comprehensive
@@ -195,24 +220,6 @@ CRITICAL: Stay faithful to the source material.
 - Quote directly when precision matters; paraphrase only to compress, never to add
 - If asked to summarize something that is already minimal, acknowledge this and present it as-is
 </fidelity_requirements>
-<create-file-tool>
-You MUST use the ${createFileToolName} tool to save your summary as a file. Follow this workflow:
-1. Write your complete summary (all sections defined in output-format below)
-2. Immediately after writing, call ${createFileToolName} with:
-   - name: A descriptive, sentence-cased filename based on the content (e.g., "Climate report summary.md")
-   - description: A brief one-line description of the file contents
-   - startMarker: The exact first 50-100 characters of your summary content
-   - done: true (since this completes the task)
-</create-file-tool>
-<output-format>
-(in this exact order)
-1) High-level summary (3–5 bullet points, ≤200 words total).
-2) Critical takeaways not to miss (bullets).
-3) Detailed and structured article with headings, paragraphs and lists. Adjust length to fit all important information without being overly verbose or adding fluff. (≤2000 words)
-4) Verification status and confidence
-   - e.g., "Checked: key claims verified with [1][2] | Confidence: medium-high | Currency: up to 2025-10."
-5) If available: Source and/or Link (optional)
-</output-format>
 <citations>
 - Use numbered inline references like [1], [2].
 - Reference list: include title, author(s), outlet/venue, date, and URL/DOI.

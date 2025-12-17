@@ -31,13 +31,9 @@ export const fetchWebsite = (handler: Handler) =>
     description: `Fetch and extract content from a website URL. Returns clean Markdown-formatted content. Use this when you need to retrieve information from web pages.`,
     inputSchema: websiteContentSchema,
     execute: async ({ url }) => {
-      try {
-        const { markdown, title, excerpt } = await fetchWebsiteContent(url);
-        await handler({ url, markdown, title, excerpt });
-        return { success: true, title, excerpt, markdown } as const;
-      } catch (err) {
-        return { success: false, error: String(err) } as const;
-      }
+      const { markdown, title, excerpt } = await fetchWebsiteContent(url);
+      await handler({ url, markdown, title, excerpt });
+      return { title, excerpt, markdown } as const;
     },
   });
 

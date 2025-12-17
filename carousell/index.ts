@@ -5,7 +5,7 @@ import { subscribeError } from "./log.ts";
 import { start } from "./scheduler.ts";
 import type { ScheduleExecutionIn } from "./schemas/scheduleExecutionIn.ts";
 import { shutdown, ShutdownReason } from "./shutdown.ts";
-import { createBackoff } from "./utils/createBackoff.ts";
+import { createBackoff } from "../libs/utils/createBackoff.ts";
 import { getUnreadMessages } from "./utils/getUnreadMessages.ts";
 import { notify } from "./utils/notify.ts";
 import { scheduleSystemTask } from "./utils/scheduleSystemTask.ts";

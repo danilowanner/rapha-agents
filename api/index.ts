@@ -13,9 +13,8 @@ import { filenameHandler } from "./filename.ts";
 import { responseMarkdownHandler } from "./responses/md.ts";
 import { responseResultHandler } from "./responses/result.ts";
 import { responseViewHandler } from "./responses/view.tsx";
-import { registerTask, startScheduler, stopScheduler } from "./scheduler.ts";
+import { startScheduler, stopScheduler } from "./scheduler.ts";
 import { summarizeHandler } from "./summarize.ts";
-import { transportDepartmentCheckHandler } from "./transportDepartmentCheckHandler.ts";
 import { wordsmithHandler } from "./wordsmith.ts";
 
 const app = new Hono();
@@ -42,7 +41,7 @@ app.post("/filename", filenameHandler);
 app.post("/summarize", summarizeHandler);
 app.post("/wordsmith", wordsmithHandler);
 
-registerTask("Check Transport Department appointments", { minutes: 15 }, transportDepartmentCheckHandler);
+// registerTask("Check Transport Department appointments", { minutes: 15 }, transportDepartmentCheckHandler);
 
 const port = parseInt(env.port, 10);
 
@@ -60,21 +59,15 @@ const server = serve(
 /**
  * Handle graceful shutdown on SIGTERM/SIGINT
  */
-function shutdown(signal: string) {
+async function shutdown(signal: string) {
   console.log(`\nReceived ${signal}, shutting down gracefully...`);
-  telegramBot.stop();
   stopScheduler();
-  server.close(() => {
-    console.log("Server closed");
-    process.exit(0);
-  });
-
-  setTimeout(() => {
-    // Force shutdown after 2 seconds
-    console.error("Forced shutdown after timeout");
-    process.exit(1);
-  }, 2000);
+  await Promise.all([
+    telegramBot.stop().then(() => console.log("Telegram bot stopped")),
+    new Promise((resolve) => server.close(() => resolve(true))).then(() => console.log("Server closed")),
+  ]);
+  process.exit(0);
 }
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", async () => shutdown("SIGTERM"));
+process.on("SIGINT", async () => shutdown("SIGINT"));

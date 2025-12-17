@@ -1,7 +1,7 @@
 import type { Client } from "@modelcontextprotocol/sdk/client";
 import type { CompatibilityCallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { logger } from "../log.ts";
-import { createBackoff } from "./createBackoff.ts";
+import { createBackoff } from "../../libs/utils/createBackoff.ts";
 import { getToolErrorMessage } from "./getToolErrorMessage.ts";
 
 const log = logger("CALL_TOOL");

@@ -2,6 +2,7 @@ import type { TextStreamPart, ToolSet } from "ai";
 import { InputFile } from "grammy";
 
 import { extractFile } from "../ai/createFileTool.ts";
+import { markdownToTelegramHtml } from "./markdownToTelegramHtml.ts";
 import { shorten } from "./shorten.ts";
 import { telegramBot } from "./telegram.ts";
 
@@ -40,7 +41,7 @@ export const createResponseStream = <TOOLS extends ToolSet>(
   const notifyTelegram = async (message: string) => {
     if (!chatId) return;
     await telegramBot.api
-      .sendMessage(chatId, message, { parse_mode: "MarkdownV2" })
+      .sendMessage(chatId, markdownToTelegramHtml(message), { parse_mode: "HTML" })
       .catch((e) => console.error("Telegram error:", e));
   };
 
@@ -93,8 +94,8 @@ export const createResponseStream = <TOOLS extends ToolSet>(
           const caption = extracted?.description ?? shorten(content, 30);
           await telegramBot.api
             .sendDocument(chatId, new InputFile(Buffer.from(content, "utf-8"), fileName), {
-              caption,
-              parse_mode: "MarkdownV2",
+              caption: markdownToTelegramHtml(caption),
+              parse_mode: "HTML",
             })
             .catch((e) => console.error("Telegram error:", e));
         }

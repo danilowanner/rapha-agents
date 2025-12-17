@@ -8,9 +8,11 @@ import { sendMessage } from "../libs/ai/sendMessageTool.ts";
 import { getUserChatId } from "../libs/context/getUserChatId.ts";
 import { userContext } from "../libs/context/userContext.ts";
 import { env } from "../libs/env.ts";
+import { formatDateTime } from "../libs/utils/formatDateTime.ts";
 import { isDefined } from "../libs/utils/isDefined.ts";
 import { listCodec } from "../libs/utils/listCodec.ts";
 import { sendResult } from "./../libs/ai/sendResultTool.ts";
+import { addMemoryEntry, getMemoryAsXml } from "./wordsmith/memory.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
@@ -89,6 +91,8 @@ export const wordsmithHandler = async (c: Context) => {
       stopWhen: hasToolCall(sendResultToolName),
     });
 
+    console.log("[FINISHED]", data.finishReason);
+
     const allToolCalls = data.steps.flatMap((step) => step.toolCalls).filter((call) => !call.dynamic);
     const reasoningSteps = allToolCalls.filter((call) => call.toolName === reasoningToolName).map((c) => c.input);
     const result = allToolCalls.find((call) => call.toolName === sendResultToolName)?.input;
@@ -99,6 +103,15 @@ export const wordsmithHandler = async (c: Context) => {
         warningResponse(`Error: No result generated. ${sendResultToolName} tool was not called.`)
       );
     }
+
+    addMemoryEntry(
+      user,
+      createMemoryEntry({
+        prompt: prompt,
+        options,
+        ...result,
+      })
+    );
 
     return c.json<Response>({
       clipboard: result.resultClipboard,
@@ -117,6 +130,23 @@ export const wordsmithHandler = async (c: Context) => {
 const warningResponse = (message: string): Response => {
   console.warn("[RESPONSE]", message);
   return { userMessage: message };
+};
+
+type MemoryInput = {
+  prompt: string;
+  options: Option[];
+  userMessage: string;
+  resultClipboard?: string;
+};
+
+const createMemoryEntry = (input: MemoryInput): { userMessage: string; agentMessage: string } => {
+  const optionsStr = input.options.length > 0 ? ` [${input.options.join(", ")}]` : "";
+  const userMessage = `**Prompt${optionsStr}:** ${input.prompt}`;
+
+  const clipboardStr = input.resultClipboard ? `\n**Clipboard:** ${input.resultClipboard}` : "";
+  const agentMessage = `**Response:** ${input.userMessage}${clipboardStr}`;
+
+  return { userMessage, agentMessage };
 };
 
 function getUserPrompt(options: Option[], prompt: string): string {
@@ -139,6 +169,7 @@ function getUserPrompt(options: Option[], prompt: string): string {
 }
 
 function getSystemPrompt(options: Option[], user: string): string {
+  const memoryXml = getMemoryAsXml(user);
   const optionPrompts = options.map<string>((option) => {
     switch (option) {
       case "Translate":
@@ -153,16 +184,15 @@ function getSystemPrompt(options: Option[], user: string): string {
         return thinkFirstPrompt;
     }
   });
-  return [basePrompt(user), userContext(user), ...optionPrompts].join("\n");
+  return [basePrompt(user), userContext(user), memoryXml, ...optionPrompts].join("\n");
 }
-
-const now = () => new Date().toISOString();
 
 const basePrompt = (user: string) => `<role>
 You are Wordsmith, an AI assistant helping the user ${user} with text editing tasks.
 </role>
 <context>
-The current date and time is ${now()}.
+TODAY: The current date and time is ${formatDateTime()}.
+CRITICAL: Your training data has a knowledge cutoff, but the current date above is accurate and provided by the system. Dates like "Nov 2025" are NOT typos or errors—they are real and current. Trust all dates provided by tools (e.g., content publish dates) as accurate.
 </context>
 <language>
 When communication with ${user} you always use English.

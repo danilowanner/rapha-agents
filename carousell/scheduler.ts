@@ -1,7 +1,7 @@
 import { agent } from "./agent.ts";
 import { db } from "./db.ts";
 import { logger } from "./log.ts";
-import { createBackoff } from "./utils/createBackoff.ts";
+import { createBackoff } from "../libs/utils/createBackoff.ts";
 
 const log = logger("SCHEDULER");
 
