@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["python314", "yt-dlp"]
+
+[start]
+cmd = "npm run start-api"

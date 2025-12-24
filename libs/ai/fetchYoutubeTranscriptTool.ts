@@ -1,12 +1,11 @@
 import { tool } from "ai";
-import { Innertube, Parser, UniversalCache } from "youtubei.js";
+import { exec } from "child_process";
+import { promisify } from "util";
 import z from "zod";
 
-import { env } from "../env.ts";
+const execAsync = promisify(exec);
 
-Parser.setParserErrorHandler(() => {});
-
-export const youtubeTranscript = z.object({
+const youtubeTranscript = z.object({
   url: z.url().describe("The URL of the YouTube video to fetch transcript from"),
 });
 
@@ -17,74 +16,83 @@ type Content = {
   url: string;
   transcript: string;
   title?: string;
-  author?: string;
-  channel?: string;
-  date?: string;
-  relative_date?: string;
 };
 
-const innertube = {
-  instance: null as Innertube | null,
-  async get(): Promise<Innertube> {
-    if (!this.instance)
-      this.instance = await Innertube.create({
-        retrieve_player: false,
-        generate_session_locally: true,
-        cache: new UniversalCache(true, "./.cache/youtube"),
-        cookie: env.youtubeCookie,
-      });
-    return this.instance;
-  },
-};
-
+/**
+ * Fetches YouTube transcript using YouTube's timedtext API.
+ */
 export const fetchYoutubeTranscript = (handler: Handler) =>
   tool({
-    description: `Fetch and polish the transcript of a YouTube video. Returns a clean, readable transcript. Use this when you need to retrieve information from a YouTube video.`,
+    description: `Fetch transcript from a YouTube video.`,
     inputSchema: youtubeTranscript,
     execute: async ({ url }) => {
-      try {
-        const { transcript, title, author, channel, date, relative_date } = await fetchAndPolishTranscript(url);
-        await handler({ url, transcript, title, author, channel, date, relative_date });
-        return { success: true, title, transcript, author, channel, date, relative_date } as const;
-      } catch (err) {
-        return { success: false, error: String(err) } as const;
-      }
+      const { transcript, title } = await fetchTranscript(url);
+      await handler({ url, transcript, title });
+      return { title, transcript };
     },
   });
 
-/**
- * Fetches and polishes the transcript of a YouTube video.
- */
-async function fetchAndPolishTranscript(url: string): Promise<Content> {
-  const youtube = await innertube.get();
-
-  // Extract video ID from URL
+async function fetchTranscript(url: string): Promise<Content> {
   const videoId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/)?.[1];
-  if (!videoId) {
-    throw new Error("Invalid YouTube URL");
-  }
+  if (!videoId) throw new Error("Invalid YouTube URL");
 
   try {
-    const info = await youtube.getInfo(videoId);
-    const transcriptData = await info.getTranscript();
-    const segments = transcriptData?.transcript?.content?.body?.initial_segments;
+    // Use yt-dlp to fetch captions - it handles YouTube's signature requirements
+    const ytDlpPath = process.env.YT_DLP_PATH || "yt-dlp";
 
-    if (!segments || !Array.isArray(segments)) {
-      throw new Error("No transcript segments found");
+    // Get title first
+    const titleCmd = `${ytDlpPath} --get-title "${url}" 2>/dev/null`;
+    const { stdout: titleOutput } = await execAsync(titleCmd);
+    const title = titleOutput.trim();
+
+    // Download captions
+    const captionCmd = `${ytDlpPath} --skip-download --write-auto-subs --sub-lang en --sub-format vtt -o "/tmp/yt-transcript-${videoId}" "${url}" 2>/dev/null`;
+    await execAsync(captionCmd);
+
+    // Read the VTT file
+    const vttPath = `/tmp/yt-transcript-${videoId}.en.vtt`;
+    const { stdout: vtt } = await execAsync(`cat "${vttPath}" 2>/dev/null || echo ""`);
+
+    if (!vtt) throw new Error("Failed to download captions");
+
+    const transcript = parseVtt(vtt);
+
+    // Clean up temp file
+    await execAsync(`rm -f "${vttPath}" 2>/dev/null`);
+
+    return { url, transcript, title };
+  } catch (error) {
+    throw new Error(`Failed to fetch transcript: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function parseVtt(vtt: string): string {
+  const lines = vtt.split("\n");
+  const textLines: string[] = [];
+  let lastLine = "";
+
+  for (const line of lines) {
+    // Skip metadata, timing lines, and empty lines
+    if (
+      line.startsWith("WEBVTT") ||
+      line.startsWith("Kind:") ||
+      line.startsWith("Language:") ||
+      line.includes("-->") ||
+      line.match(/^\d+$/) ||
+      line.trim() === ""
+    ) {
+      continue;
     }
 
-    const transcript = segments.map((segment: any) => segment.snippet.text).join(" ");
+    // Remove timing tags like <00:00:05.759><c> text</c>
+    const cleaned = line.replace(/<[^>]+>/g, "").trim();
 
-    return {
-      url,
-      transcript,
-      title: info.basic_info.title,
-      author: info.basic_info.author,
-      channel: info.basic_info.channel?.name,
-      date: info.primary_info?.published?.toString(),
-      relative_date: info.primary_info?.relative_date?.toString(),
-    };
-  } catch (e) {
-    throw new Error(`Failed to get transcript: ${e instanceof Error ? e.message : String(e)}`);
+    // Deduplicate repeated lines (VTT often has progressive text)
+    if (cleaned && cleaned !== lastLine) {
+      textLines.push(cleaned);
+      lastLine = cleaned;
+    }
   }
+
+  return textLines.join(" ");
 }
