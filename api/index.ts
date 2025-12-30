@@ -9,12 +9,14 @@ import { env } from "../libs/env.ts";
 import { telegramBot } from "../libs/utils/telegram.ts";
 import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
 import { busHandler } from "./bus.ts";
+import { chatHandler } from "./chat.ts";
 import { filenameHandler } from "./filename.ts";
 import { responseMarkdownHandler } from "./responses/md.ts";
 import { responseResultHandler } from "./responses/result.ts";
 import { responseViewHandler } from "./responses/view.tsx";
 import { startScheduler, stopScheduler } from "./scheduler.ts";
 import { summarizeHandler } from "./summarize.ts";
+import { toolsApp } from "./tools.ts";
 import { wordsmithHandler } from "./wordsmith.ts";
 
 const app = new Hono();
@@ -36,10 +38,13 @@ app.get("/responses/result/:id", responseResultHandler);
 
 app.use("*", authHeaderMiddleware);
 
+app.route("/tools", toolsApp);
+
 app.post("/bus", busHandler);
 app.post("/filename", filenameHandler);
 app.post("/summarize", summarizeHandler);
 app.post("/wordsmith", wordsmithHandler);
+app.post("/chat/completions", chatHandler);
 
 // registerTask("Check Transport Department appointments", { minutes: 15 }, transportDepartmentCheckHandler);
 
