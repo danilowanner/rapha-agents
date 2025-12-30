@@ -7,8 +7,6 @@ console.log(`Testing fetchYoutubeTranscript with URL: ${url}`);
 const tool = fetchYoutubeTranscript(async (content) => {
   console.log("\n--- Handler Callback ---");
   console.log("Title:", content.title);
-  console.log("Date:", content.date);
-  console.log("Relative date:", content.relative_date);
   console.log("Transcript length:", content.transcript.length);
   console.log("Preview:", content.transcript.substring(0, 200) + "...");
 });

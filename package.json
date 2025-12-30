@@ -9,18 +9,20 @@
     "build-api": "cd api/client && vite build",
     "start-carousell": "exec tsx carousell/index.ts",
     "start-carousell-dev": "tsx watch carousell/index.ts",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "check-deps": "which yt-dlp && yt-dlp --version || echo 'yt-dlp not found'"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.32",
     "@ai-sdk/openai-compatible": "^1.0.18",
+    "@asteasolutions/zod-to-openapi": "^8.2.0",
     "@hono/node-server": "^1.19.5",
     "@modelcontextprotocol/sdk": "^1.18.1",
     "@mozilla/readability": "^0.6.0",
     "ai": "^5.0.49",
     "dotenv": "^17.2.2",
     "grammy": "^1.38.2",
-    "hono": "^4.10.1",
+    "hono": "^4.11.3",
     "ink": "^6.5.0",
     "ink-text-input": "^6.0.0",
     "jotai": "^2.15.1",

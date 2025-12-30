@@ -1,5 +1,6 @@
 [phases.setup]
 nixPkgs = ["python314", "yt-dlp"]
+aptPkgs = ["ffmpeg"]
 
 [start]
 cmd = "npm run start-api"

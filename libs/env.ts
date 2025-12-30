@@ -17,4 +17,10 @@ export const env = {
   get youtubeCookie() {
     return z.string().optional().parse(process.env.YOUTUBE_COOKIE);
   },
+  get oxylabsUsername() {
+    return z.string().optional().parse(process.env.OXYLABS_USERNAME);
+  },
+  get oxylabsPassword() {
+    return z.string().optional().parse(process.env.OXYLABS_PASSWORD);
+  },
 };

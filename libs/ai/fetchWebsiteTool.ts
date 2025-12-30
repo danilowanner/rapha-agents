@@ -10,6 +10,12 @@ const websiteContentSchema = z.object({
   url: z.url().describe("The URL of the website to fetch content from. Supports shortened URLs and redirects."),
 });
 
+const websiteContentOutputSchema = z.object({
+  title: z.string().optional().describe("The title of the webpage"),
+  excerpt: z.string().optional().describe("A short excerpt or description of the webpage"),
+  markdown: z.string().describe("The main content of the webpage in Markdown format"),
+});
+
 type WebsiteContent = { url: string; markdown: string; title?: string; excerpt?: string };
 type Handler = (content: WebsiteContent) => Promise<void>;
 
@@ -30,6 +36,7 @@ export const fetchWebsite = (handler: Handler) =>
   tool({
     description: `Fetch and extract content from a website URL. Returns clean Markdown-formatted content. Use this when you need to retrieve information from web pages.`,
     inputSchema: websiteContentSchema,
+    outputSchema: websiteContentOutputSchema,
     execute: async ({ url }) => {
       const { markdown, title, excerpt } = await fetchWebsiteContent(url);
       await handler({ url, markdown, title, excerpt });
