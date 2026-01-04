@@ -1,10 +1,12 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
+import type { Tool } from "ai";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ZodType } from "zod";
 import { fetchWebsite } from "../libs/ai/fetchWebsiteTool.ts";
 import { fetchYoutubeTranscript } from "../libs/ai/fetchYoutubeTranscriptTool.ts";
+import { googleSearch } from "../libs/ai/googleSearchTool.ts";
 import { getErrorMessage } from "../libs/utils/getErrorMessage.ts";
 
 const app = new Hono();
@@ -12,9 +14,17 @@ const app = new Hono();
 app.use("/*", cors());
 
 const tools = {
-  "Fetch-Website": fetchWebsite(async () => {}),
-  "Fetch-Youtube-Transcript": fetchYoutubeTranscript(async () => {}),
+  "Fetch-Website": fetchWebsite(null),
+  "Fetch-Youtube-Transcript": fetchYoutubeTranscript(null),
+  "Google-Search": googleSearch(null),
 };
+
+/** Tool with schemas typed as ZodType for OpenAPI compatibility. */
+type AnyTool = Omit<Tool, "inputSchema" | "outputSchema"> & { inputSchema: ZodType; outputSchema: ZodType };
+
+/** Iterates over tools with generic typing. */
+const forEachTool = (fn: (name: string, tool: AnyTool) => void) =>
+  Object.entries(tools).forEach(([name, tool]) => fn(name, tool as AnyTool));
 
 /**
  * Returns OpenAPI 3.1.0 spec for all tools
@@ -22,7 +32,7 @@ const tools = {
 app.get("/openapi.json", (c: Context) => {
   const registry = new OpenAPIRegistry();
 
-  Object.entries(tools).forEach(([name, tool]) => {
+  forEachTool((name, tool) => {
     registry.registerPath({
       method: "post",
       path: `/${name.toLocaleLowerCase()}`,
@@ -31,9 +41,7 @@ app.get("/openapi.json", (c: Context) => {
       request: {
         body: {
           content: {
-            "application/json": {
-              schema: tool.inputSchema as ZodType,
-            },
+            "application/json": { schema: tool.inputSchema },
           },
         },
       },
@@ -41,9 +49,7 @@ app.get("/openapi.json", (c: Context) => {
         200: {
           description: "Success",
           content: {
-            "application/json": {
-              schema: tool.outputSchema as ZodType,
-            },
+            "application/json": { schema: tool.outputSchema },
           },
         },
       },
@@ -62,10 +68,11 @@ app.get("/openapi.json", (c: Context) => {
 /**
  * Generate endpoints for each tool
  */
-Object.entries(tools).forEach(([name, tool]) => {
+forEachTool((name, tool) => {
   app.post(`/${name.toLocaleLowerCase()}`, async (c: Context) => {
     try {
-      const params = await c.req.json();
+      const rawParams = await c.req.json();
+      const params = tool.inputSchema.parse(rawParams);
       if (!tool.execute) return c.json({ error: "Tool missing execution function." }, 500);
       const result = await tool.execute(params, { messages: [], toolCallId: "" });
       return c.json(result);

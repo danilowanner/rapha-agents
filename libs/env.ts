@@ -23,4 +23,10 @@ export const env = {
   get oxylabsPassword() {
     return z.string().optional().parse(process.env.OXYLABS_PASSWORD);
   },
+  get googleSearchApiKey() {
+    return z.string().min(1, "GOOGLE_SEARCH_API_KEY is required").parse(process.env.GOOGLE_SEARCH_API_KEY);
+  },
+  get googleCseId() {
+    return z.string().min(1, "GOOGLE_CSE_ID is required").parse(process.env.GOOGLE_CSE_ID);
+  },
 };

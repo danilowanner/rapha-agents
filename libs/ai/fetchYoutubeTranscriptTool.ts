@@ -9,6 +9,7 @@ const youtubeTranscript = z.object({
 
 const youtubeTranscriptOutput = z.object({
   title: z.string().optional().describe("The title of the YouTube video"),
+  uploader: z.string().optional().describe("The uploader of the YouTube video"),
   transcript: z.string().describe("The full transcript text of the video"),
 });
 
@@ -19,20 +20,21 @@ type Content = {
   url: string;
   transcript: string;
   title?: string;
+  uploader?: string;
 };
 
 /**
  * Fetches YouTube transcript using YouTube's timedtext API.
  */
-export const fetchYoutubeTranscript = (handler: Handler) =>
+export const fetchYoutubeTranscript = (handler: Handler | null) =>
   tool({
     description: `Fetch transcript from a YouTube video.`,
     inputSchema: youtubeTranscript,
     outputSchema: youtubeTranscriptOutput,
     execute: async ({ url }) => {
-      const { transcript, title } = await fetchTranscript(url);
-      await handler({ url, transcript, title });
-      return { title, transcript };
+      const { transcript, title, uploader } = await fetchTranscript(url);
+      await handler?.({ url, transcript, title, uploader });
+      return { title, transcript, uploader };
     },
   });
 

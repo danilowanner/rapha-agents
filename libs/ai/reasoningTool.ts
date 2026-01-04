@@ -16,14 +16,14 @@ export const reasoning = z.object({
 export type Reasoning = z.infer<typeof reasoning>;
 type Handler = (reasoning: Reasoning) => Promise<void>;
 
-export const reasoningTool = (handler: Handler, chatId?: string) =>
+export const reasoningTool = (handler: Handler | null, chatId?: string) =>
   tool({
     description: `Add a step to the reasoning process. Use BEFORE other tools to outline approach.
     Use tool for updates when significant changes occur or if unclear about next steps. NEVER duplicate prior reasoning.`,
     inputSchema: reasoning,
     execute: async ({ title, details }) => {
       try {
-        await handler({ title, details });
+        await handler?.({ title, details });
         if (chatId) {
           telegramBot.api.sendMessage(chatId, `*${title}*\n🤔Thinking...`, { parse_mode: "Markdown" });
         }

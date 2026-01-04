@@ -16,13 +16,13 @@ export const result = z.object({
 export type Result = z.infer<typeof result>;
 type Handler = (result: Result) => Promise<void>;
 
-export const sendResult = (handler: Handler, chatId?: string) =>
+export const sendResult = (handler: Handler | null, chatId?: string) =>
   tool({
     description: `Send a message to the user. Keep the message relevant and to the point. Optionally provide a text snippet that the user can easily copy to their clipboard.`,
     inputSchema: result,
     execute: async ({ resultClipboard, userMessage }) => {
       try {
-        await handler({ resultClipboard, userMessage });
+        await handler?.({ resultClipboard, userMessage });
         if (chatId) {
           telegramBot.api.sendMessage(chatId, userMessage, { parse_mode: "Markdown" });
           if (resultClipboard) {

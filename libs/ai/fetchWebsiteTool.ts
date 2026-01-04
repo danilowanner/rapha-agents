@@ -19,6 +19,21 @@ const websiteContentOutputSchema = z.object({
 type WebsiteContent = { url: string; markdown: string; title?: string; excerpt?: string };
 type Handler = (content: WebsiteContent) => Promise<void>;
 
+/**
+ * Creates a tool that fetches and extracts website content as Markdown.
+ */
+export const fetchWebsite = (handler: Handler | null) =>
+  tool({
+    description: `Fetch and extract content from a website URL. Returns clean Markdown-formatted content. Use this when you need to retrieve information from web pages.`,
+    inputSchema: websiteContentSchema,
+    outputSchema: websiteContentOutputSchema,
+    execute: async ({ url }) => {
+      const { markdown, title, excerpt } = await fetchWebsiteContent(url);
+      await handler?.({ url, markdown, title, excerpt });
+      return { title, excerpt, markdown } as const;
+    },
+  });
+
 const virtualConsole = new VirtualConsole();
 virtualConsole.on("error", () => {});
 
@@ -28,21 +43,6 @@ const turndown = new TurndownService({
   bulletListMarker: "-",
 });
 turndown.remove(["script", "style", "nav", "header", "footer"]);
-
-/**
- * Creates a tool that fetches and extracts website content as Markdown.
- */
-export const fetchWebsite = (handler: Handler) =>
-  tool({
-    description: `Fetch and extract content from a website URL. Returns clean Markdown-formatted content. Use this when you need to retrieve information from web pages.`,
-    inputSchema: websiteContentSchema,
-    outputSchema: websiteContentOutputSchema,
-    execute: async ({ url }) => {
-      const { markdown, title, excerpt } = await fetchWebsiteContent(url);
-      await handler({ url, markdown, title, excerpt });
-      return { title, excerpt, markdown } as const;
-    },
-  });
 
 async function fetchWebsiteContent(url: string): Promise<{ markdown: string; title?: string; excerpt?: string }> {
   const response = await fetch(url, {
