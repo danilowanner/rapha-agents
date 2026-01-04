@@ -1,10 +1,6 @@
 import type { TextStreamPart, ToolSet } from "ai";
-import { InputFile } from "grammy";
 
-import { extractFile } from "../ai/createFileTool.ts";
-import { markdownToTelegramHtml } from "./markdownToTelegramHtml.ts";
-import { shorten } from "./shorten.ts";
-import { telegramBot } from "./telegram.ts";
+import { getErrorMessage } from "./getErrorMessage.ts";
 
 type ToolCallChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-call" }>;
 type ToolResultChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-result" }>;
@@ -24,7 +20,9 @@ type StreamHandlers<TOOLS extends ToolSet> = {
 
 type ResponseStreamOptions<TOOLS extends ToolSet> = {
   handlers: StreamHandlers<TOOLS>;
-  chatId?: string;
+  hooks?: {
+    onComplete?: (chunks: string[]) => void;
+  };
 };
 
 /**
@@ -35,21 +33,14 @@ export const createResponseStream = <TOOLS extends ToolSet>(
   fullStream: AsyncIterable<TextStreamPart<TOOLS>>,
   options: ResponseStreamOptions<TOOLS>
 ): ReadableStream<string> => {
-  const { handlers, chatId } = options;
+  const { handlers, hooks } = options;
   const chunks: string[] = [];
-
-  const notifyTelegram = async (message: string) => {
-    if (!chatId) return;
-    await telegramBot.api
-      .sendMessage(chatId, markdownToTelegramHtml(message), { parse_mode: "HTML" })
-      .catch((e) => console.error("Telegram error:", e));
-  };
 
   return new ReadableStream<string>({
     async start(controller) {
       const enqueue = (text: string) => {
         controller.enqueue(text);
-        if (chatId) chunks.push(text);
+        if (hooks?.onComplete) chunks.push(text);
       };
       try {
         for await (const chunk of fullStream) {
@@ -63,7 +54,6 @@ export const createResponseStream = <TOOLS extends ToolSet>(
               if (!result) break;
               const text = isMarkerResult(result) ? result.marker : result;
               enqueue(`\n\n${text}\n\n`);
-              if (!isMarkerResult(result)) await notifyTelegram(result);
               break;
             }
 
@@ -72,7 +62,6 @@ export const createResponseStream = <TOOLS extends ToolSet>(
               if (!result) break;
               const text = isMarkerResult(result) ? result.marker : result;
               enqueue(`\n\n${text}\n\n`);
-              if (!isMarkerResult(result)) await notifyTelegram(result);
               break;
             }
 
@@ -80,37 +69,27 @@ export const createResponseStream = <TOOLS extends ToolSet>(
               const result = handlers.onError?.(chunk) ?? `⚠️ Error: ${chunk.error}`;
               const text = isMarkerResult(result) ? result.marker : result;
               enqueue(`\n\n${text}\n\n`);
-              if (!isMarkerResult(result)) await notifyTelegram(result);
               break;
             }
           }
         }
 
-        if (chatId && chunks.length > 0) {
-          const fullText = chunks.join("");
-          const extracted = extractFile(fullText);
-          const fileName = extracted?.name ?? "result.md";
-          const content = extracted?.result ?? fullText;
-          const caption = extracted?.description ?? shorten(content, 30);
-          await telegramBot.api
-            .sendDocument(chatId, new InputFile(Buffer.from(content, "utf-8"), fileName), {
-              caption: markdownToTelegramHtml(caption),
-              parse_mode: "HTML",
-            })
-            .catch((e) => console.error("Telegram error:", e));
+        if (hooks?.onComplete && chunks.length > 0) {
+          hooks.onComplete(chunks);
         }
 
         controller.close();
       } catch (error) {
-        handleStreamError(controller, error);
+        const message = handleStreamError(controller, error);
+        controller.enqueue(message);
+        controller.close();
       }
     },
   });
 };
 
-const handleStreamError = (controller: ReadableStreamDefaultController<string>, error: unknown): void => {
-  const errorMessage = error instanceof Error ? error.message : String(error);
+const handleStreamError = (controller: ReadableStreamDefaultController<string>, error: unknown): string => {
+  const errorMessage = getErrorMessage(error);
   console.error("[STREAM ERROR]", errorMessage, error);
-  controller.enqueue(`\n\n⚠️ Stream error: ${errorMessage}\n\n`);
-  controller.close();
+  return `\n\n⚠️ Stream error: ${errorMessage}\n\n`;
 };

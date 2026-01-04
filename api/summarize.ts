@@ -15,8 +15,9 @@ import { fileToText } from "../libs/utils/fileToText.ts";
 import { formatDateTime } from "../libs/utils/formatDateTime.ts";
 import { getErrorMessage } from "../libs/utils/getErrorMessage.ts";
 import { addResponse } from "./responses/state.ts";
+import { sendTelegramResponseFile } from "./responses/telegram.ts";
 
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const MAX_PDF_PAGES = 20;
 
 const inputSchema = z.object({
   text: z.string().optional(),
@@ -30,6 +31,8 @@ type Response = {
 
 const fetchYoutubeTranscriptToolName = "fetchYoutubeTranscript";
 const fetchWebsiteToolName = "fetchWebsite";
+
+const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
 /**
  * Handles summarization requests for text, URLs, and documents.
@@ -100,7 +103,6 @@ export const summarizeHandler = async (c: Context) => {
 
     const responseId = addResponse(
       createResponseStream(result.fullStream, {
-        chatId,
         handlers: {
           onToolCall: (chunk) => {
             if (chunk.dynamic) return null;
@@ -127,6 +129,12 @@ export const summarizeHandler = async (c: Context) => {
             }
           },
         },
+        hooks: {
+          onComplete: (chunks) => {
+            console.log(`[STREAM COMPLETE] Sent ${chunks.length} chunks for response ID: ${responseId}`);
+            if (chatId) sendTelegramResponseFile(chatId, responseId);
+          },
+        },
       })
     );
     console.log(`[RESPONSE CREATED] ID: ${responseId}`);
@@ -134,7 +142,7 @@ export const summarizeHandler = async (c: Context) => {
     return c.json<Response>({ responseId });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
-    console.error("Error occurred:", errorMessage);
+    console.error("[RESPONSE ERROR]:", errorMessage);
     return c.json({ error: errorMessage }, 500);
   }
 };
@@ -152,7 +160,7 @@ async function buildUserMessageContent(text: string | undefined, file: File | nu
   }
   if (file) {
     const pdfText = file.type === "application/pdf" ? await fileToText(file).catch(() => null) : null;
-    const imageBuffers = await fileToImageBuffers(file, { maxPages: 20 });
+    const imageBuffers = await fileToImageBuffers(file, { maxPages: MAX_PDF_PAGES });
     content.push(...imageBuffers.map((buffer) => ({ type: "image" as const, image: buffer })));
     if (pdfText) content.push({ type: "text", text: `<pdf_text>${pdfText}</pdf_text>` });
   }

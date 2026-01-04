@@ -115,6 +115,7 @@ export type MetadataRequest = {
 
 export type VideoMetadata = {
   title?: string;
+  uploader?: string;
   is_transcript_available?: boolean;
   user_subtitle_languages?: string[];
   user_transcript_languages?: string[];
@@ -134,4 +135,5 @@ export type TranscriptResult = {
   url: string;
   transcript: string;
   title?: string;
+  uploader?: string;
 };

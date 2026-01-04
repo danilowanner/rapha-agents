@@ -10,12 +10,6 @@ export type FileMetadata = {
   startMarker: string;
 };
 
-export type ExtractedFile = {
-  name: string;
-  description?: string;
-  result: string;
-};
-
 const createFileInput = z.object({
   name: z.string().min(1).describe("Filename with extension, Sentence cased (e.g., 'The benefits of omega-3.md')"),
   description: z.string().optional().describe("Brief one-line description of the file contents"),
@@ -60,17 +54,23 @@ export const getMarker = (output: InferToolOutput<ReturnType<typeof createFile>>
   return `${hiddenMeta}\n${visiblePart}`;
 };
 
+type ExtractedFile = {
+  name: string;
+  description?: string;
+  result: string;
+};
+
 /**
  * Extracts file content from a response string using a start marker.
  * Returns the content from the start marker to the end marker with metadata.
  */
-export const extractFile = (response?: string): ExtractedFile | null => {
+export const extractFileByMarker = (response?: string): ExtractedFile | null => {
   if (!response) return null;
   const markerStart = response.indexOf(FILE_MARKER_PREFIX);
   const metaStart = markerStart + FILE_MARKER_PREFIX.length;
   const metaEnd = response.indexOf(FILE_MARKER_SUFFIX, metaStart);
 
-  if (markerStart === -1 || metaEnd === -1) return { name: "response.md", result: response.trim() };
+  if (markerStart === -1 || metaEnd === -1) return null;
 
   try {
     const metadataJson = response.slice(metaStart, metaEnd);
@@ -80,6 +80,6 @@ export const extractFile = (response?: string): ExtractedFile | null => {
     const content = response.slice(startMarkerStart !== -1 ? startMarkerStart : 0, markerStart).trim();
     return { name: metadata.name, description: metadata.description, result: content };
   } catch {
-    return { name: "response.md", result: response.trim() };
+    return null;
   }
 };

@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
-import { extractFile } from "../../libs/ai/createFileTool.ts";
+import { extractFileByMarker } from "../../libs/ai/createFileTool.ts";
+import { extractFile } from "../../libs/ai/functions/extractFile.ts";
 
 const MAX_CACHED_RESPONSES = 20;
 
@@ -44,7 +45,7 @@ type FileResult = {
  * Returns the full buffered content when stream completes.
  */
 export const getResponseResult = async (id: string): Promise<FileResult | null> => {
-  return extractFile(await responses.get(id)?.buffer.getResult()) ?? null;
+  return responses.get(id)?.buffer.getFileResult() ?? null;
 };
 
 /**
@@ -74,6 +75,7 @@ class ResponseBuffer extends EventEmitter {
   private chunks: string[] = [];
   private completed = Promise.withResolvers<void>();
   private isDone = false;
+  private fileResultPromise: Promise<FileResult | null> | null = null;
 
   constructor(stream: ReadableStream<string>) {
     super();
@@ -120,5 +122,18 @@ class ResponseBuffer extends EventEmitter {
   async getResult(): Promise<string> {
     await this.completed.promise;
     return this.chunks.join("");
+  }
+
+  async getFileResult(): Promise<FileResult | null> {
+    this.fileResultPromise ??= this.extractFileResult();
+    return this.fileResultPromise;
+  }
+
+  private async extractFileResult(): Promise<FileResult | null> {
+    await this.completed.promise;
+    const content = this.chunks.join("");
+    const extracted = extractFileByMarker(content);
+    if (extracted) return extracted;
+    return extractFile(content);
   }
 }

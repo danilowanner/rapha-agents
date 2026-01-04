@@ -31,12 +31,14 @@ const TRANSCRIPT_ATTEMPTS: readonly TranscriptAttempt[] = [
  */
 export const fetchYoutubeTranscript = async (videoId: string, url: string): Promise<TranscriptResult> => {
   const metadata = await fetchVideoMetadata(videoId);
-  if (metadata?.is_transcript_available) throw new Error("No transcripts available for this video");
+  const { title, uploader } = metadata;
+  if (!metadata.is_transcript_available)
+    throw new Error(`No transcripts available for the video ${videoId} (${title})`);
 
   const attempts = selectTranscriptAttempts(metadata);
   const transcript = await fetchTranscriptText(videoId, attempts);
 
-  return { url, transcript, title: metadata.title };
+  return { url, transcript, title, uploader };
 };
 
 async function fetchTranscriptText(videoId: string, attempts: readonly TranscriptAttempt[]): Promise<string> {
