@@ -1,0 +1,26 @@
+# This is the main service for the Open WebUI interface.
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    restart: unless-stopped
+    ports:
+      - 8080
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      # - 'WEB_LOADER_ENGINE=playwright'
+      # - 'PLAYWRIGHT_WS_URL=ws://playwright:3000'
+    volumes:
+      - open-webui:/app/backend/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+# -----------------------------------------------------------------------------------
+# Optional: Playwright Service for Web Loader
+# playwright:
+#   image: mcr.microsoft.com/playwright:v1.49.1-noble
+#   restart: unless-stopped
+#   command: npx -y playwright@1.49.1 run-server --port 3000 --host 0.0.0.0
+# -----------------------------------------------------------------------------------
+
+volumes:
+  open-webui: {}

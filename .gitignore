@@ -2,3 +2,6 @@ node_modules
 .env
 build
 .cache
+dokploy/owui/uploads.tar.gz
+dokploy/owui/verctor_db.tar.gz
+dokploy/owui/webui.db.tar.gz
