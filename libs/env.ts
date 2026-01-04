@@ -2,6 +2,9 @@ import "dotenv/config";
 import z from "zod";
 
 export const env = {
+  get baseUrl() {
+    return z.url("BASE_URL must be a valid URL").parse(process.env.BASE_URL);
+  },
   get poeApiKey() {
     return z.string().min(1, "POE_API_KEY is required").parse(process.env.POE_API_KEY);
   },

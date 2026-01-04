@@ -9,6 +9,7 @@ import { getUserChatId } from "../libs/context/getUserChatId.ts";
 import { userContext } from "../libs/context/userContext.ts";
 import { env } from "../libs/env.ts";
 import { formatDateTime } from "../libs/utils/formatDateTime.ts";
+import { getErrorMessage } from "../libs/utils/getErrorMessage.ts";
 import { isDefined } from "../libs/utils/isDefined.ts";
 import { listCodec } from "../libs/utils/listCodec.ts";
 import { sendResult } from "./../libs/ai/sendResultTool.ts";
@@ -64,7 +65,7 @@ export const wordsmithHandler = async (c: Context) => {
     const imageFile = formData.get("image") as File | null;
     const imageBuffer: Buffer | undefined = imageFile ? Buffer.from(await imageFile.arrayBuffer()) : undefined;
 
-    console.log("[RECEIVED]", { prompt, user, options, hasImage: !!imageBuffer });
+    console.log("[WORDSMITH] Received:", { prompt, user, options, hasImage: !!imageBuffer });
 
     const userMessageContent = [
       { type: "text" as const, text: getUserPrompt(options, prompt) },
@@ -121,14 +122,14 @@ export const wordsmithHandler = async (c: Context) => {
       totalUsage: data.totalUsage,
     });
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Unknown error";
-    console.error("Error occurred:", errorMessage);
-    return c.json({ error: errorMessage }, 500);
+    const error = getErrorMessage(err);
+    console.error("[WORDSMITH ERROR]", error);
+    return c.json({ error }, 500);
   }
 };
 
 const warningResponse = (message: string): Response => {
-  console.warn("[RESPONSE]", message);
+  console.warn("[WORDSMITH]", message);
   return { userMessage: message };
 };
 

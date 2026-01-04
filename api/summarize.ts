@@ -64,7 +64,7 @@ export const summarizeHandler = async (c: Context) => {
       return c.json<Response>(warningResponse("Error: Must provide either text or file to summarize"), 400);
     }
 
-    console.log("[RECEIVED]", { hasText: !!text, hasFile: !!file, user });
+    console.log("[SUMMARIZE] Received:", { hasText: !!text, hasFile: !!file, user });
 
     const userMessageContent = await buildUserMessageContent(text, file);
 
@@ -141,9 +141,9 @@ export const summarizeHandler = async (c: Context) => {
 
     return c.json<Response>({ responseId });
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Unknown error";
-    console.error("[RESPONSE ERROR]:", errorMessage);
-    return c.json({ error: errorMessage }, 500);
+    const error = getErrorMessage(err);
+    console.error("[SUMMARIZE ERROR]:", error);
+    return c.json({ error }, 500);
   }
 };
 
@@ -241,6 +241,6 @@ CRITICAL: Stay faithful to the source material.
 }
 
 const warningResponse = (message: string): Response => {
-  console.warn("[ERROR]", message);
+  console.warn("[SUMMARIZE]", message);
   return { error: message };
 };
