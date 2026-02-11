@@ -11,6 +11,7 @@ import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
 import { busHandler } from "./bus.ts";
 import { chatHandler } from "./chat.ts";
 import { filenameHandler } from "./filename.ts";
+import { memoryHandler } from "./memory.ts";
 import { responseMarkdownHandler } from "./responses/md.ts";
 import { responseResultHandler } from "./responses/result.ts";
 import { responseViewHandler } from "./responses/view.tsx";
@@ -28,7 +29,7 @@ app.use(
   "/assets/*",
   serveStatic({
     root: join(__dirname, "build"),
-  })
+  }),
 );
 app.get("/", (c: Context) => c.json({ message: "Hello, World!" }));
 app.get("/health", (c: Context) => c.json({ status: "ok" }));
@@ -44,6 +45,7 @@ app.post("/bus", busHandler);
 app.post("/filename", filenameHandler);
 app.post("/summarize", summarizeHandler);
 app.post("/wordsmith", wordsmithHandler);
+app.post("/memory", memoryHandler);
 app.post("/chat/completions", chatHandler);
 
 // registerTask("Check Transport Department appointments", { minutes: 15 }, transportDepartmentCheckHandler);
@@ -58,7 +60,7 @@ const server = serve(
   (info: { port: number }) => {
     console.log(`Server running on http://localhost:${info.port}`);
     startScheduler();
-  }
+  },
 );
 
 /**

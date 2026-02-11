@@ -32,4 +32,7 @@ export const env = {
   get googleCseId() {
     return z.string().min(1, "GOOGLE_CSE_ID is required").parse(process.env.GOOGLE_CSE_ID);
   },
+  get databaseUrl() {
+    return z.string().min(1, "DATABASE_URL is required").parse(process.env.DATABASE_URL);
+  },
 };

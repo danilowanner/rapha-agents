@@ -5,3 +5,4 @@ build
 owui/uploads.tar.gz
 owui/verctor_db.tar.gz
 owui/webui.db.tar.gz
+/generated/prisma

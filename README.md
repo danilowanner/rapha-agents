@@ -27,6 +27,21 @@ npm run start-api-dev      # API server (watch mode)
 npm run start-carousell-dev # Carousell agent (watch mode)
 ```
 
+## Prisma
+
+PostgreSQL ORM used by the API. Schema: `prisma/schema.prisma`. Config: `prisma.config.ts` (reads `DATABASE_URL` from env).
+
+**Setup**
+```bash
+# After schema changes (either form works)
+npm run prisma:generate   # or: npx prisma generate
+# Optional: run migrations (when prisma/migrations exist)
+npx prisma migrate deploy
+```
+
+**Usage**  
+Import the client and types from the db layer: `api/db/prisma.ts` exports `prisma`, and re-exports `MemoryEntry`, `User`, `Prisma`. Use `api/db/memoryEntry.ts` and `api/db/user.ts` for model operations. In CI or Docker, run `prisma generate` before typecheck or start.
+
 ## Deployment (Dokploy)
 
 ### API Application

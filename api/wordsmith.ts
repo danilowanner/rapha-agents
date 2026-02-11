@@ -75,7 +75,7 @@ export const wordsmithHandler = async (c: Context) => {
     const data = await generateText({
       model: poe("Claude-Sonnet-4.5"),
       messages: [{ role: "user" as const, content: userMessageContent }],
-      system: getSystemPrompt(options, user),
+      system: await getSystemPrompt(options, user),
       tools: {
         [sendMessageToolName]: sendMessage(async ({ userMessage }) => {
           console.log(`[MESSAGE] ${userMessage}`);
@@ -169,8 +169,8 @@ function getUserPrompt(options: Option[], prompt: string): string {
   return [prompt, tasks].join("\n");
 }
 
-function getSystemPrompt(options: Option[], user: string): string {
-  const memoryXml = getMemoryAsXml(user);
+async function getSystemPrompt(options: Option[], user: string): Promise<string> {
+  const memoryXml = await getMemoryAsXml(user);
   const optionPrompts = options.map<string>((option) => {
     switch (option) {
       case "Translate":

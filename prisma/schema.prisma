@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String        @id
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  entries   MemoryEntry[]
+}
+
+model MemoryEntry {
+  id                    Int      @id @default(autoincrement())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId               String
+  topic                 String
+  userMessage           String   @db.Text
+  agentMessage          String   @db.Text
+  condensedAgentMessage String?  @db.Text
+  createdAt             DateTime @default(now())
+
+  @@index([userId, agentId, createdAt])
+}

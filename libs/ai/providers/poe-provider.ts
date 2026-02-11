@@ -4,6 +4,7 @@ export type PoeModelId =
   | "GPT-5.2-Instant"
   | "GPT-5.2-Pro"
   | "GPT-5.2"
+  | "GPT-5-nano"
   | "Gemini-3-Flash"
   | "Gemini-3-Pro"
   | "Claude-Opus-4.5"

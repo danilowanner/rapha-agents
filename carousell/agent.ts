@@ -1,6 +1,6 @@
 import { generateText, stepCountIs, type Tool } from "ai";
 
-import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
+import { createPoeAdapter, type PoeModelId } from "../libs/ai/providers/poe-provider.ts";
 import { env } from "../libs/env.ts";
 import { db } from "./db.ts";
 import { logger } from "./log.ts";
@@ -99,16 +99,19 @@ type TaskProps = {
   toolNames: ToolName[];
   system?: string;
   stepLimit?: number;
-  model?: "Claude-Sonnet-4" | "o4-mini" | "GPT-5-Codex";
+  model?: PoeModelId;
 };
 
 async function task(task: TaskProps) {
-  const { prompt, stepLimit = 6, toolNames, system = getSystem(["base", "pages"]), model = "GPT-5-Codex" } = task;
+  const { prompt, stepLimit = 6, toolNames, system = getSystem(["base", "pages"]), model = "GPT-5.2" } = task;
   try {
-    const selectedTools = toolNames.reduce((acc, name) => {
-      acc[name] = tools[name];
-      return acc;
-    }, {} as Record<ToolName, Tool>);
+    const selectedTools = toolNames.reduce(
+      (acc, name) => {
+        acc[name] = tools[name];
+        return acc;
+      },
+      {} as Record<ToolName, Tool>,
+    );
 
     const data = await generateText({
       model: poe(model),
