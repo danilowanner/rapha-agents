@@ -34,6 +34,7 @@
     "pdf-parse": "^2.4.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "tsx": "^4.16.2",
     "turndown": "^7.2.2",
     "zod": "^4.1.12"
   },
@@ -46,7 +47,6 @@
     "@types/react-dom": "^19.2.3",
     "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "^5.1.1",
-    "tsx": "^4.16.2",
     "typescript": "^5.9.2",
     "vite": "^7.2.2"
   }

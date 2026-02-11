@@ -1,0 +1,8 @@
+# Universal excludes for all Docker builds
+node_modules
+.env
+.git
+.cache
+*.md
+test
+README.md
