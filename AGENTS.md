@@ -11,12 +11,13 @@ Sacrifice grammar for the sake of concision.
 
 ## Project
 
-We are working on an LLM agents to automate various tasks.
+Monorepo for LLM-powered agents and API services. Deployed on Dokploy with independent deployments per service.
 
 Key packages within the project:
 
-- api/ : An API server that exposes endpoints for different agents.
-- carousell/ : An agent that autonomously gathers data and fills forms in your logged-in Chrome using Browser MCP.
+- api/ : Hono API server (api.raphastudio.com) with endpoints, schedulers, and response streaming. Dockerfile at `api/Dockerfile`.
+- carousell/ : Agent that autonomously gathers data and fills forms in logged-in Chrome using Browser MCP.
+- owui/ : Open WebUI deployment config (docker-compose).
 - libs/ : Shared libraries and utilities used across different packages.
 
 ### Technilogy stack
@@ -182,6 +183,18 @@ const { object } = await generateObject({
 - `"Claude-Sonnet-4.5"`, `"Claude-Haiku-4.5"`
 - `"Gemini-3-Flash"`
 - Full list in types of createPoeAdapter
+
+## Deployment
+
+### Structure
+
+The monorepo uses path-based deployments on Dokploy:
+
+- **API:** Dockerfile deployment (`api/Dockerfile`), watch paths: `api/**`, `libs/**`
+- **OWUI:** Compose deployment (`owui/docker-compose.yml`), watch paths: `owui/**`
+- **Shared:** Root `package.json`, `tsconfig.json` used by all services
+
+Each service deploys independently based on watch paths.
 
 ## Source control
 

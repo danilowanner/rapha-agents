@@ -6,11 +6,17 @@ Monorepo for LLM-powered agents and API services built with TypeScript, Hono, an
 
 ```
 /
-├── api/            # Hono API server (api.raphastudio.com)
-├── carousell/      # Carousell automation agent (Browser MCP)
-├── owui/           # Open WebUI deployment config
-├── libs/           # Shared utilities (ai, context, utils)
-└── test/           # Tests
+├── api/
+│   ├── Dockerfile           # API Docker image
+│   ├── index.ts             # Server entry point
+│   └── ...                  # Endpoints, schedulers, UI
+├── carousell/               # Carousell automation agent (Browser MCP)
+├── owui/
+│   └── docker-compose.yml   # Open WebUI deployment
+├── libs/                    # Shared utilities (ai, context, utils)
+├── test/                    # Tests
+├── package.json             # Root dependencies
+└── tsconfig.json            # Shared TypeScript config
 ```
 
 ## Local Development
@@ -28,9 +34,9 @@ npm run start-carousell-dev # Carousell agent (watch mode)
 **Type:** Application (From Git)
 
 **Build:**
-- Build Path: `/`
-- Dockerfile: `api/Dockerfile`
 - Build Method: **Dockerfile**
+- Docker File: `api/Dockerfile`
+- Docker Context Path: `.` (repo root)
 
 **Watch Paths:**
 ```
