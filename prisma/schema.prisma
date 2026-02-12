@@ -19,6 +19,7 @@ model MemoryEntry {
   userId                String
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   agentId               String
+  chatId                String
   topic                 String
   userMessage           String   @db.Text
   agentMessage          String   @db.Text

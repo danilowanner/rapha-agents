@@ -1,10 +1,11 @@
-import type { MemoryEntry } from "./prisma.ts";
+import type { MemoryEntry, Prisma } from "./prisma.ts";
 import { prisma } from "./prisma.ts";
 import { getOrCreateUser } from "./user.ts";
 
 export type CreateMemoryEntryParams = {
   userId: string;
   agentId: string;
+  chatId: string;
   topic: string;
   userMessage: string;
   agentMessage: string;
@@ -19,6 +20,7 @@ export async function createMemoryEntry(params: CreateMemoryEntryParams): Promis
     data: {
       userId: params.userId,
       agentId: params.agentId,
+      chatId: params.chatId,
       topic: params.topic,
       userMessage: params.userMessage,
       agentMessage: params.agentMessage,
@@ -28,15 +30,18 @@ export async function createMemoryEntry(params: CreateMemoryEntryParams): Promis
 
 /**
  * Returns entries for a user and agent, ordered by createdAt.
+ * When excludeChatId is set, omits entries whose chatId matches (includes entries with null chatId).
  */
 export async function getMemoryEntries(
   userId: string,
   agentId: string,
-  options?: { limit?: number; order?: "asc" | "desc" }
+  options?: { limit?: number; order?: "asc" | "desc"; excludeChatId?: string },
 ): Promise<MemoryEntry[]> {
-  const { limit, order = "desc" } = options ?? {};
+  const { limit, order = "desc", excludeChatId } = options ?? {};
+  const where: Prisma.MemoryEntryWhereInput =
+    excludeChatId !== undefined ? { userId, agentId, chatId: { not: excludeChatId } } : { userId, agentId };
   return prisma.memoryEntry.findMany({
-    where: { userId, agentId },
+    where,
     orderBy: { createdAt: order },
     take: limit,
   });
@@ -48,7 +53,7 @@ export async function getMemoryEntries(
 export async function getMemoryTopics(
   userId: string,
   agentId: string,
-  options?: { limit?: number }
+  options?: { limit?: number },
 ): Promise<{ id: number; topic: string; createdAt: Date }[]> {
   const entries = await prisma.memoryEntry.findMany({
     where: { userId, agentId },
@@ -63,21 +68,14 @@ export async function getMemoryEntryById(id: number): Promise<MemoryEntry | null
   return prisma.memoryEntry.findUnique({ where: { id } });
 }
 
-export async function updateCondensedAgentMessage(
-  id: number,
-  condensedAgentMessage: string
-): Promise<void> {
+export async function updateCondensedAgentMessage(id: number, condensedAgentMessage: string): Promise<void> {
   await prisma.memoryEntry.update({
     where: { id },
     data: { condensedAgentMessage },
   });
 }
 
-export async function updateCondensed(
-  id: number,
-  condensedAgentMessage: string,
-  topic: string
-): Promise<void> {
+export async function updateCondensed(id: number, condensedAgentMessage: string, topic: string): Promise<void> {
   await prisma.memoryEntry.update({
     where: { id },
     data: { condensedAgentMessage, topic },
@@ -90,7 +88,7 @@ export async function updateCondensed(
 export async function deleteMemoryEntriesExcept(
   userId: string,
   agentId: string,
-  keepEntryIds: number[]
+  keepEntryIds: number[],
 ): Promise<void> {
   await prisma.memoryEntry.deleteMany({
     where: { userId, agentId, id: { notIn: keepEntryIds } },

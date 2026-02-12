@@ -11,7 +11,7 @@ import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
 import { busHandler } from "./bus.ts";
 import { chatHandler } from "./chat.ts";
 import { filenameHandler } from "./filename.ts";
-import { memoryHandler } from "./memory.ts";
+import { memoryGetHandler, memoryPostHandler } from "./memory.ts";
 import { responseMarkdownHandler } from "./responses/md.ts";
 import { responseResultHandler } from "./responses/result.ts";
 import { responseViewHandler } from "./responses/view.tsx";
@@ -45,7 +45,8 @@ app.post("/bus", busHandler);
 app.post("/filename", filenameHandler);
 app.post("/summarize", summarizeHandler);
 app.post("/wordsmith", wordsmithHandler);
-app.post("/memory", memoryHandler);
+app.post("/memory", memoryPostHandler);
+app.get("/memory/:userId", memoryGetHandler);
 app.post("/chat/completions", chatHandler);
 
 // registerTask("Check Transport Department appointments", { minutes: 15 }, transportDepartmentCheckHandler);

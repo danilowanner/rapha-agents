@@ -1,4 +1,5 @@
 import { generateText } from "ai";
+import { randomUUID } from "node:crypto";
 
 import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
 import { env } from "../../libs/env.ts";
@@ -16,12 +17,18 @@ const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
 /**
  * Adds a new memory entry for a user. Triggers async condensation.
+ * When chatId is omitted (e.g. wordsmith), a UUID is generated per call so the entry is not tied to a conversation.
  */
-export function addMemoryEntry(userId: string, entry: { userMessage: string; agentMessage: string }): void {
+export function addMemoryEntry(
+  userId: string,
+  entry: { userMessage: string; agentMessage: string },
+  chatId?: string | null,
+): void {
   const topic = shorten(entry.userMessage, TOPIC_MAX_LENGTH);
   dbCreateMemoryEntry({
     userId,
     agentId: AGENT_ID,
+    chatId: chatId ?? randomUUID(),
     topic,
     userMessage: entry.userMessage,
     agentMessage: entry.agentMessage,
@@ -38,9 +45,10 @@ export function addMemoryEntry(userId: string, entry: { userMessage: string; age
 
 /**
  * Gets memory as XML block for injection into system prompt.
+ * excludeChatId omits entries from that conversation (avoids duplicating current chat history).
  */
-export async function getMemoryAsXml(userId: string): Promise<string> {
-  const entries = await getMemoryEntries(userId, AGENT_ID, { order: "asc" });
+export async function getMemoryAsXml(userId: string, options?: { excludeChatId?: string }): Promise<string> {
+  const entries = await getMemoryEntries(userId, AGENT_ID, { order: "asc", excludeChatId: options?.excludeChatId });
   if (entries.length === 0) return "";
 
   const recentEntries = entries.slice(-RECENT_ENTRIES_COUNT);
@@ -58,6 +66,7 @@ export async function getMemoryAsXml(userId: string): Promise<string> {
 
   const result = xml.build();
   const condensedCount = entries.filter((e) => e.condensedAgentMessage).length;
+  console.debug(result);
   console.log(`[MEMORY] ${userId}: ${result.length} chars, ${condensedCount}/${entries.length} condensed/entries`);
   return result;
 }
