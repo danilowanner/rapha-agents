@@ -13,6 +13,14 @@ const RECENT_ENTRIES_COUNT = 5;
 const TOPIC_MAX_LENGTH = 200;
 const AGENT_ID = "main";
 
+export const CONDENSE_SYSTEM_PROMPT = `Condense this AI assistant response. Output exactly two sections separated by a blank line. No labels, no prefixes, no bullets anywhere in the output.
+
+Line 1: a scannable summary of what the memory contains, e.g.
+Translation to German; benefits of Omega 3 supplements, vegetarian, dosage
+WhatsApp reply drafted for Danilo's mother, upcoming dinner plans, making lasagna
+
+After a blank line: key facts, names, numbers, and context needed for follow-up (~100 words). Write plain prose, no lists.`;
+
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
 /**
@@ -71,27 +79,28 @@ export async function getMemoryAsXml(userId: string, options?: { excludeChatId?:
   return result;
 }
 
-function condenseEntry(entryId: number, agentMessage: string): Promise<void> {
+
+export function condenseEntry(entryId: number, agentMessage: string): Promise<void> {
   if (agentMessage.length < TOPIC_MAX_LENGTH * 2) return Promise.resolve();
 
   return generateText({
     model: poe("GPT-5-nano"),
-    system: `Condense this AI assistant response into two sections separated by a blank line.
-
-TOPIC — one line, no label/prefix. A scannable summary of what the memory contains.
-Examples: "Translation to German; benefits of Omega 3 supplements, vegetarian, dosage"
-"WhatsApp reply drafted for Danilo's mother, upcoming dinner plans, making lasagna"
-
-BODY — after the blank line, no label/prefix. Key facts, names, numbers, and context needed for follow-up (~100 words).
-
-Output nothing else — no bullet markers, no "Summary:", no "Content:", just the two raw sections.`,
+    system: CONDENSE_SYSTEM_PROMPT,
     prompt: agentMessage,
   }).then((result) => {
-    const text = result.text.trim();
-    const blankLineIdx = text.indexOf("\n\n");
-    const topic =
-      blankLineIdx === -1 ? shorten(text, TOPIC_MAX_LENGTH) : shorten(text.slice(0, blankLineIdx).trim(), TOPIC_MAX_LENGTH);
-    const condensed = blankLineIdx === -1 ? text : text.slice(blankLineIdx + 2).trim();
+    const { topic, condensed } = parseCondensedOutput(result.text);
     return updateCondensed(entryId, condensed, topic);
   });
+}
+
+/**
+ * Splits raw condensation LLM output into topic (first section) and condensed body (after blank line).
+ */
+export function parseCondensedOutput(raw: string): { topic: string; condensed: string } {
+  const text = raw.trim();
+  const blankLineIdx = text.indexOf("\n\n");
+  const topic =
+    blankLineIdx === -1 ? shorten(text, TOPIC_MAX_LENGTH) : shorten(text.slice(0, blankLineIdx).trim(), TOPIC_MAX_LENGTH);
+  const condensed = blankLineIdx === -1 ? text : text.slice(blankLineIdx + 2).trim();
+  return { topic, condensed };
 }
