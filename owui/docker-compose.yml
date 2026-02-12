@@ -1,18 +1,27 @@
 # This is the main service for the Open WebUI interface.
 services:
   open-webui:
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui:0.7.2
     restart: unless-stopped
     ports:
       - 8080
     environment:
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - WEBUI_NAME=Rapha
+      - JWT_EXPIRES_IN=8w
+      - CORS_ALLOW_ORIGIN=https://ai.raphastudio.com
+      - BYPASS_MODEL_ACCESS_CONTROL=true
+      - MODELS_CACHE_TTL=300
+      - CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE=5
+      - USER_PERMISSIONS_CHAT_CONTROLS=false
       # - 'WEB_LOADER_ENGINE=playwright'
       # - 'PLAYWRIGHT_WS_URL=ws://playwright:3000'
     volumes:
       - open-webui:/app/backend/data
     extra_hosts:
       - host.docker.internal:host-gateway
+    networks:
+      - dokploy-network
 
 # -----------------------------------------------------------------------------------
 # Optional: Playwright Service for Web Loader
@@ -24,3 +33,7 @@ services:
 
 volumes:
   open-webui: {}
+
+networks:
+  dokploy-network:
+    external: true

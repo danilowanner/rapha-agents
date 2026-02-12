@@ -32,6 +32,28 @@
         "color": "terminal.ansiCyan",
         "id": "check-circled"
       }
+    },
+    {
+      "type": "shell",
+      "command": "npx dotenv-cli -e .env -- npx prisma migrate deploy",
+      "problemMatcher": [],
+      "icon": {
+        "color": "terminal.ansiCyan",
+        "id": "database"
+      },
+      "label": "Prisma: deploy migrations in DEV",
+      "detail": "npx prisma migrate deploy"
+    },
+    {
+      "type": "shell",
+      "command": "npx dotenv-cli -e .env.production -- npx prisma migrate deploy",
+      "problemMatcher": [],
+      "icon": {
+        "color": "terminal.ansiRed",
+        "id": "database"
+      },
+      "label": "Prisma: deploy migrations in PROD",
+      "detail": "npx prisma migrate deploy"
     }
   ]
 }

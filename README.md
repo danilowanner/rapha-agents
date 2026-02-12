@@ -29,18 +29,11 @@ npm run start-carousell-dev # Carousell agent (watch mode)
 
 ## Prisma
 
-PostgreSQL ORM used by the API. Schema: `prisma/schema.prisma`. Config: `prisma.config.ts` (reads `DATABASE_URL` from env).
+Schema: `prisma/schema.prisma`. Config: `prisma.config.ts` (uses `DATABASE_URL`).
 
-**Setup**
-```bash
-# After schema changes (either form works)
-npm run prisma:generate   # or: npx prisma generate
-# Optional: run migrations (when prisma/migrations exist)
-npx prisma migrate deploy
-```
-
-**Usage**  
-Import the client and types from the db layer: `api/db/prisma.ts` exports `prisma`, and re-exports `MemoryEntry`, `User`, `Prisma`. Use `api/db/memoryEntry.ts` and `api/db/user.ts` for model operations. In CI or Docker, run `prisma generate` before typecheck or start.
+- **After schema change:** `npx prisma migrate dev --name <name>` (creates migration), then `npm run prisma:generate`.
+- **Prod:** After deploy, run migrations: `npx prisma migrate deploy` (shell script in tasks.json).
+- **Usage:** `api/db/prisma.ts` exports `prisma`, `MemoryEntry`, `User`, `Prisma`. Use `api/db/memoryEntry.ts`, `api/db/user.ts`.
 
 ## Deployment (Dokploy)
 
@@ -49,35 +42,19 @@ Import the client and types from the db layer: `api/db/prisma.ts` exports `prism
 **Type:** Application (From Git)
 
 **Build:**
+
 - Build Method: **Dockerfile**
 - Docker File: `api/Dockerfile`
 - Docker Context Path: `.` (repo root)
 
-**Watch Paths:**
-```
-api/**
-libs/**
-```
+**Watch Paths:** `api/**`, `libs/**`, `prisma/**`
 
-**Environment Variables:**
-- `PORT=3000` (auto-set by Dokploy)
-- `BASE_URL` (e.g., https://api.raphastudio.com)
-- `POE_API_KEY`
-- `TELEGRAM_BOT_TOKEN`
-- `API_KEY`
-- `GOOGLE_SEARCH_API_KEY`
-- `GOOGLE_CSE_ID`
-- Optional: `YOUTUBE_COOKIE`, `OXYLABS_USERNAME`, `OXYLABS_PASSWORD`
+**Env:** `PORT`, `BASE_URL`, `DATABASE_URL`, `POE_API_KEY`, `TELEGRAM_BOT_TOKEN`, `API_KEY`, `GOOGLE_SEARCH_API_KEY`, `GOOGLE_CSE_ID`. Optional: `YOUTUBE_COOKIE`, `OXYLABS_*`.
+**Domain:** api.raphastudio.com
 
-**Domain:** `api.raphastudio.com`
+### OWUI
 
-### OWUI (Open WebUI)
-
-**Type:** Compose
-
-**Compose File:** `owui/docker-compose.yml`
-
-**Watch Paths:** `owui/**`
-
-**Environment Variables:**
-- `WEBUI_SECRET_KEY`
+**Type:** Compose.
+**File:** `owui/docker-compose.yml`.
+**Watch:** `owui/**`.
+**Env:** `WEBUI_SECRET_KEY`.

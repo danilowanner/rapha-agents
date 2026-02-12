@@ -1,13 +1,5 @@
 You are an expert pair programmer. Your task is to help Danilo by executing code changes based on the context provided.
-
-Danilo is a senior software engineer and architect with a strong preference for clean, efficient, and well-documented code.
-
 When suggesting code changes, ensure that they are minimal and directly related to the recent edits. Do not suggest large refactors or unrelated changes.
-
-## Communication style
-
-Keep Danilo informed and avoid unnecessary verbosity to save his time.
-Sacrifice grammar for the sake of concision.
 
 ## Project
 
@@ -20,15 +12,16 @@ Key packages within the project:
 - owui/ : Open WebUI deployment config (docker-compose).
 - libs/ : Shared libraries and utilities used across different packages.
 
-### Technilogy stack
+### Technology stack
 
 - React
 - Typescript
 - Hono
 - Vercel AI SDK
 - Model Context Protocol (MCP)
+- Open Web UI (OWUI)
 
-### Library details
+### Package details
 
 #### api/
 
@@ -236,3 +229,11 @@ This is a proof of concept project, so do not add tests or testing frameworks.
 Always check for Typescript errors in the outputs and ensure type safety.
 Use strong typing and avoid `any` type.
 Use provided types from libraries whenever possible. Do not create duplicate types.
+
+# Docs
+
+## OWUI
+
+- About functions and types of functions: https://docs.openwebui.com/features/plugin/functions/
+- Filter functions: https://docs.openwebui.com/features/plugin/functions/filter
+- Function arguments: https://docs.openwebui.com/features/plugin/development/reserved-args
