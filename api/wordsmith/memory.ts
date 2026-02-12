@@ -76,15 +76,22 @@ function condenseEntry(entryId: number, agentMessage: string): Promise<void> {
 
   return generateText({
     model: poe("GPT-5-nano"),
-    system: `Condense this AI assistant response for memory. Use this exact format:
-- First line: a short summary of what the condensed memory below contains (e.g. "Translation to German; benefits of Omega 3 supplements, vegetarian, dosage", "WhatsApp reply drafted for Danilo's mother, upcoming dinner plans, making lasagna"). Useful so someone scanning topics can tell which entry to open for full details.
-- Following lines: the full condensed content — key facts, names, numbers, and context needed for follow-up (around 100 words total).
-Output only those two parts, no other preamble.`,
+    system: `Condense this AI assistant response into two sections separated by a blank line.
+
+TOPIC — one line, no label/prefix. A scannable summary of what the memory contains.
+Examples: "Translation to German; benefits of Omega 3 supplements, vegetarian, dosage"
+"WhatsApp reply drafted for Danilo's mother, upcoming dinner plans, making lasagna"
+
+BODY — after the blank line, no label/prefix. Key facts, names, numbers, and context needed for follow-up (~100 words).
+
+Output nothing else — no bullet markers, no "Summary:", no "Content:", just the two raw sections.`,
     prompt: agentMessage,
   }).then((result) => {
     const text = result.text.trim();
-    const firstNewline = text.indexOf("\n");
-    const topic = firstNewline === -1 ? shorten(text, TOPIC_MAX_LENGTH) : text.slice(0, firstNewline).trim();
-    return updateCondensed(entryId, text, topic);
+    const blankLineIdx = text.indexOf("\n\n");
+    const topic =
+      blankLineIdx === -1 ? shorten(text, TOPIC_MAX_LENGTH) : shorten(text.slice(0, blankLineIdx).trim(), TOPIC_MAX_LENGTH);
+    const condensed = blankLineIdx === -1 ? text : text.slice(blankLineIdx + 2).trim();
+    return updateCondensed(entryId, condensed, topic);
   });
 }
