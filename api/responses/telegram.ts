@@ -25,6 +25,7 @@ export async function sendTelegramResponseFile(chatId: number | string, response
       parse_mode: "HTML",
     });
   } catch (error) {
+    console.debug(error);
     console.error("[RESPONSES/TELEGRAM] Failed to send:", getErrorMessage(error));
   }
 }
