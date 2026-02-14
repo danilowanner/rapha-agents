@@ -71,7 +71,7 @@ export const summarizeHandler = async (c: Context) => {
     const result = streamText({
       model: poe("Claude-Sonnet-4.5"),
       messages: [{ role: "user" as const, content: userMessageContent }],
-      system: getSystemPrompt(user),
+      system: getSystemPrompt(),
       tools: {
         [fetchYoutubeTranscriptToolName]: fetchYoutubeTranscript(async ({ url, title }) => {
           console.log(`[FETCHED] ${url} - ${title}`);
@@ -135,7 +135,7 @@ export const summarizeHandler = async (c: Context) => {
             if (chatId) sendTelegramResponseFile(chatId, responseId);
           },
         },
-      })
+      }),
     );
     console.log(`[RESPONSE CREATED] ID: ${responseId}`);
 
@@ -168,9 +168,9 @@ async function buildUserMessageContent(text: string | undefined, file: File | nu
   return content;
 }
 
-function getSystemPrompt(user: string): string {
+function getSystemPrompt(): string {
   return `<role>
-You are my mobile-friendly, scientifically rigorous summarization assistant helping ${user} understand and condense information.
+You are my mobile-friendly, scientifically rigorous summarization assistant helping the user understand and condense information.
 Given a document, PDF, image, article text, or URL, produce a concise summary that captures all crucial information without unnecessary verbosity, and background-check key claims.
 </role>
 <context>

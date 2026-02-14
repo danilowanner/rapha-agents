@@ -14,13 +14,13 @@ const RECENT_ENTRIES_COUNT = 5;
 const TOPIC_MAX_LENGTH = 200;
 const AGENT_ID = "main";
 
+type CondensedEntry = { topic: string; condensed: string };
+
 export const CONDENSE_SYSTEM_PROMPT = `Condense this AI assistant response. Output exactly two sections separated by a blank line. No labels, no prefixes, no bullets anywhere in the output.
 
-Line 1: a scannable summary of what the memory contains, e.g.
-Translation to German; benefits of Omega 3 supplements, vegetarian, dosage
-WhatsApp reply drafted for Danilo's mother, upcoming dinner plans, making lasagna
+Line 1: a scannable summary of what the memory contains, e.g. "Translation to German; benefits of Omega 3 supplements, vegetarian, dosage", "WhatsApp reply drafted for Danilo's mother, upcoming dinner plans, making lasagna"
 
-After a blank line: key facts, names, numbers, and context needed for follow-up (~100 words). Write plain prose, no lists.`;
+After a blank line: Shortened version of the agent message. Keep key facts, names, numbers, and context needed for follow-up. Remove any unnecessary filler text and duplication. Write plain prose, no lists.`;
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
@@ -43,9 +43,13 @@ export function addMemoryEntry(
     agentMessage: entry.agentMessage,
   })
     .then((created) => {
-      condenseEntry(created.id, created.agentMessage).catch((err) => {
-        console.warn(`[MEMORY] Condensation failed:`, err.message);
-      });
+      condenseEntry(created.agentMessage)
+        .then((condensed) =>
+          condensed ? updateCondensed(created.id, condensed.condensed, condensed.topic) : undefined,
+        )
+        .catch((err) => {
+          console.warn(`[MEMORY] Condensation failed:`, err.message);
+        });
     })
     .catch((err) => {
       console.warn(`[MEMORY] Failed to create entry:`, err.message);
@@ -66,6 +70,8 @@ export async function getMemoryAsXml(userId: string, options?: { excludeChatId?:
 
   const xml = new XmlBuilder("conversationHistory");
   if (user.context) xml.child("userContext", user.context);
+  xml.child("now", `Current date and time: ${formatDateTime()}`);
+
   const recentXml = xml.child("recent");
   for (const entry of recentEntries) {
     const ago = formatRelativeTime(entry.createdAt, now);
@@ -82,17 +88,14 @@ export async function getMemoryAsXml(userId: string, options?: { excludeChatId?:
   return result;
 }
 
-export function condenseEntry(entryId: number, agentMessage: string): Promise<void> {
-  if (agentMessage.length < TOPIC_MAX_LENGTH * 2) return Promise.resolve();
+export function condenseEntry(agentMessage: string): Promise<CondensedEntry | null> {
+  if (agentMessage.length < TOPIC_MAX_LENGTH * 2) return Promise.resolve(null);
 
   return generateText({
-    model: poe("GPT-5-nano"),
+    model: poe("Gemini-3-Flash"),
     system: CONDENSE_SYSTEM_PROMPT,
     prompt: agentMessage,
-  }).then((result) => {
-    const { topic, condensed } = parseCondensedOutput(result.text);
-    return updateCondensed(entryId, condensed, topic);
-  });
+  }).then((result) => parseCondensedOutput(result.text));
 }
 
 /**
