@@ -8,6 +8,7 @@ import { formatRelativeTime } from "../../libs/utils/formatRelativeTime.ts";
 import { shorten } from "../../libs/utils/shorten.ts";
 import { XmlBuilder } from "../../libs/utils/XmlBuilder.ts";
 import { createMemoryEntry as dbCreateMemoryEntry, getMemoryEntries, updateCondensed } from "../db/memoryEntry.ts";
+import { getOrCreateUser } from "../db/user.ts";
 
 const RECENT_ENTRIES_COUNT = 5;
 const TOPIC_MAX_LENGTH = 200;
@@ -56,13 +57,15 @@ export function addMemoryEntry(
  * excludeChatId omits entries from that conversation (avoids duplicating current chat history).
  */
 export async function getMemoryAsXml(userId: string, options?: { excludeChatId?: string }): Promise<string> {
+  const user = await getOrCreateUser(userId);
   const entries = await getMemoryEntries(userId, AGENT_ID, { order: "asc", excludeChatId: options?.excludeChatId });
-  if (entries.length === 0) return "";
+  if (!user.context && entries.length === 0) return "";
 
   const recentEntries = entries.slice(-RECENT_ENTRIES_COUNT);
   const now = new Date();
 
   const xml = new XmlBuilder("conversationHistory");
+  if (user.context) xml.child("userContext", user.context);
   const recentXml = xml.child("recent");
   for (const entry of recentEntries) {
     const ago = formatRelativeTime(entry.createdAt, now);
@@ -78,7 +81,6 @@ export async function getMemoryAsXml(userId: string, options?: { excludeChatId?:
   console.log(`[MEMORY] ${userId}: ${result.length} chars, ${condensedCount}/${entries.length} condensed/entries`);
   return result;
 }
-
 
 export function condenseEntry(entryId: number, agentMessage: string): Promise<void> {
   if (agentMessage.length < TOPIC_MAX_LENGTH * 2) return Promise.resolve();
@@ -100,7 +102,9 @@ export function parseCondensedOutput(raw: string): { topic: string; condensed: s
   const text = raw.trim();
   const blankLineIdx = text.indexOf("\n\n");
   const topic =
-    blankLineIdx === -1 ? shorten(text, TOPIC_MAX_LENGTH) : shorten(text.slice(0, blankLineIdx).trim(), TOPIC_MAX_LENGTH);
+    blankLineIdx === -1
+      ? shorten(text, TOPIC_MAX_LENGTH)
+      : shorten(text.slice(0, blankLineIdx).trim(), TOPIC_MAX_LENGTH);
   const condensed = blankLineIdx === -1 ? text : text.slice(blankLineIdx + 2).trim();
   return { topic, condensed };
 }

@@ -6,7 +6,6 @@ import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
 import { reasoningTool } from "../libs/ai/reasoningTool.ts";
 import { sendMessage } from "../libs/ai/sendMessageTool.ts";
 import { getUserChatId } from "../libs/context/getUserChatId.ts";
-import { userContext } from "../libs/context/userContext.ts";
 import { env } from "../libs/env.ts";
 import { formatDateTime } from "../libs/utils/formatDateTime.ts";
 import { getErrorMessage } from "../libs/utils/getErrorMessage.ts";
@@ -17,7 +16,7 @@ import { addMemoryEntry, getMemoryAsXml } from "./wordsmith/memory.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
-const allOptions = ["Translate", "Translate Screen", "Reply", "Format for Whatsapp", "Think First"] as const;
+const allOptions = ["Translate", "Screen", "Translate Screen", "Reply", "Format for Whatsapp", "Think First"] as const;
 
 const optionSchema = z.enum(allOptions);
 type Option = z.infer<typeof optionSchema>;
@@ -101,7 +100,7 @@ export const wordsmithHandler = async (c: Context) => {
     if (!result) {
       console.debug(data.content);
       return c.json<Response>(
-        warningResponse(`Error: No result generated. ${sendResultToolName} tool was not called.`)
+        warningResponse(`Error: No result generated. ${sendResultToolName} tool was not called.`),
       );
     }
 
@@ -111,7 +110,7 @@ export const wordsmithHandler = async (c: Context) => {
         prompt: prompt,
         options,
         ...result,
-      })
+      }),
     );
 
     return c.json<Response>({
@@ -142,50 +141,58 @@ type MemoryInput = {
 
 const createMemoryEntry = (input: MemoryInput): { userMessage: string; agentMessage: string } => {
   const optionsStr = input.options.length > 0 ? ` [${input.options.join(", ")}]` : "";
-  const userMessage = `**Prompt${optionsStr}:** ${input.prompt}`;
+  const userMessage = `${input.prompt}\n\n<options>${optionsStr}</options>`;
 
-  const clipboardStr = input.resultClipboard ? `\n**Clipboard:** ${input.resultClipboard}` : "";
-  const agentMessage = `**Response:** ${input.userMessage}${clipboardStr}`;
+  const clipboardStr = input.resultClipboard ? `\n\n<clipboard>\n${input.resultClipboard}\n</clipboard>` : "";
+  const agentMessage = `${input.userMessage}${clipboardStr}`;
 
   return { userMessage, agentMessage };
 };
 
 function getUserPrompt(options: Option[], prompt: string): string {
-  const taskItems = options.map<string>((option) => {
-    switch (option) {
-      case "Translate":
-        return '<task type="translate">Please translate the text.</task>';
-      case "Reply":
-        return '<task type="reply">Please craft a reply to the message.</task>';
-      case "Format for Whatsapp":
-        return '<task type="format_whatsapp">Please format the text for WhatsApp.</task>';
-      case "Translate Screen":
-        return '<task type="screen_reader">Please read, translate and summarize the screen.</task>';
-      case "Think First":
-        return '<task type="think_first">REQUIRED: You MUST use the addAReasoningStep tool to outline your approach before sending the result.</task>';
-    }
-  });
+  const taskItems = options
+    .map<string | undefined>((option) => {
+      switch (option) {
+        case "Translate":
+          return '<task type="translate">Please translate the text.</task>';
+        case "Reply":
+          return '<task type="reply">Please craft a reply to the message.</task>';
+        case "Format for Whatsapp":
+          return '<task type="format_whatsapp">Please format the text for WhatsApp.</task>';
+        case "Screen":
+          return undefined;
+        case "Translate Screen":
+          return '<task type="screen_reader">Please read, translate and summarize the screen.</task>';
+        case "Think First":
+          return '<task type="think_first">REQUIRED: You MUST use the addAReasoningStep tool to outline your approach before sending the result.</task>';
+      }
+    })
+    .filter(isDefined);
   const tasks = `<tasks>\n${taskItems.join("\n")}\n</tasks>`;
   return [prompt, tasks].join("\n");
 }
 
 async function getSystemPrompt(options: Option[], user: string): Promise<string> {
   const memoryXml = await getMemoryAsXml(user);
-  const optionPrompts = options.map<string>((option) => {
-    switch (option) {
-      case "Translate":
-        return translatePrompt;
-      case "Reply":
-        return replyPrompt;
-      case "Format for Whatsapp":
-        return formatWhatsappPrompt;
-      case "Translate Screen":
-        return translateScreenPrompt;
-      case "Think First":
-        return thinkFirstPrompt;
-    }
-  });
-  return [basePrompt(user), userContext(user), memoryXml, ...optionPrompts].join("\n");
+  const optionPrompts = options
+    .map<string | undefined>((option) => {
+      switch (option) {
+        case "Translate":
+          return translatePrompt;
+        case "Reply":
+          return replyPrompt;
+        case "Format for Whatsapp":
+          return formatWhatsappPrompt;
+        case "Screen":
+          return undefined;
+        case "Translate Screen":
+          return translateScreenPrompt;
+        case "Think First":
+          return thinkFirstPrompt;
+      }
+    })
+    .filter(isDefined);
+  return [basePrompt(user), memoryXml, ...optionPrompts].join("\n");
 }
 
 const basePrompt = (user: string) => `<role>
