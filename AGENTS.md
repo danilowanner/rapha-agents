@@ -29,14 +29,18 @@ Hono-based API server with scheduled tasks:
 
 - **index.ts**: Main server setup with Hono, endpoints, and task registration
 - **authHeaderMiddleware.ts**: Authentication middleware
-- **bus.ts**: Bus endpoint handler
-- **filename.ts**: Filename generation endpoint
-- **summarize.ts**: Summarization endpoint
-- **wordsmith.ts**: Wordsmith (writing) endpoint
-- **transportDepartmentCheckHandler.ts**: Scheduled task for checking transport department appointments
-- **scheduler.ts**: Task scheduler (registerTask, startScheduler, stopScheduler)
+- **handlers/bus.ts**: Bus endpoint handler
+- **handlers/chat.ts**: OpenAI-compatible chat completions endpoint
+- **handlers/filename.ts**: Filename generation endpoint
+- **handlers/memory.ts**: Memory read/write endpoints
+- **handlers/summarize.ts**: Summarization endpoint
+- **handlers/tools.ts**: Tool OpenAPI and execution endpoints
+- **handlers/wordsmith.ts**: Wordsmith (writing) endpoint
+- **handlers/transportDepartmentCheckHandler.ts**: Scheduled task for checking transport department appointments
+- **features/scheduler.ts**: Task scheduler (registerTask, startScheduler, stopScheduler)
+- **features/memory.ts**: Memory feature used by wordsmith and memory endpoints
 
-**Response streaming (responses/):**
+**Response streaming (handlers/responses/):**
 
 - **state.ts**: ResponseBuffer class using EventEmitter for buffered stream replay. Exports addResponse, getResponseStream, getResponseResult, hasResponse, deleteResponse
 - **md.ts**: Streams markdown chunks as plain text for client consumption
@@ -237,3 +241,4 @@ Use provided types from libraries whenever possible. Do not create duplicate typ
 - About functions and types of functions: https://docs.openwebui.com/features/plugin/functions/
 - Filter functions: https://docs.openwebui.com/features/plugin/functions/filter
 - Function arguments: https://docs.openwebui.com/features/plugin/development/reserved-args
+- Grammy: https://grammy.dev/guide/basics

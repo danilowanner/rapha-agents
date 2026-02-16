@@ -9,7 +9,9 @@ Monorepo for LLM-powered agents and API services built with TypeScript, Hono, an
 ├── api/
 │   ├── Dockerfile           # API Docker image
 │   ├── index.ts             # Server entry point
-│   └── ...                  # Endpoints, schedulers, UI
+│   ├── handlers/            # Route handlers (bus, chat, summarize, wordsmith, responses/*)
+│   ├── features/            # Shared API features (scheduler, memory)
+│   └── ...                  # UI, db, tests
 ├── carousell/               # Carousell automation agent (Browser MCP)
 ├── owui/
 │   └── docker-compose.yml   # Open WebUI deployment
