@@ -1,9 +1,9 @@
 import type { Context } from "hono";
 import { renderToString } from "react-dom/server";
 
-import { createTestResponse } from "../test/utils/createTestResponse.ts";
-import { Document } from "../ui/Document.tsx";
-import { ResponseContainer } from "../ui/ResponseContainer.tsx";
+import { createTestResponse } from "../../test/utils/createTestResponse.ts";
+import { Document } from "../../ui/Document.tsx";
+import { ResponseContainer } from "../../ui/ResponseContainer.tsx";
 import { addResponse, hasResponse } from "./state.ts";
 
 /**

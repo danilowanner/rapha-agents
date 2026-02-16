@@ -1,9 +1,9 @@
 import { generateText, type UserContent } from "ai";
 import type { Context } from "hono";
-import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
-import { env } from "../libs/env.ts";
-import { fileToImageBuffers } from "../libs/utils/fileToImageBuffers.ts";
-import { fileToText } from "../libs/utils/fileToText.ts";
+import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
+import { env } from "../../libs/env.ts";
+import { fileToImageBuffers } from "../../libs/utils/fileToImageBuffers.ts";
+import { fileToText } from "../../libs/utils/fileToText.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 

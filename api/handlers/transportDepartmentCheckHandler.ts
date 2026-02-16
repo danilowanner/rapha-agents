@@ -1,6 +1,6 @@
 import { JSDOM } from "jsdom";
-import { getUserChatId } from "../libs/context/getUserChatId.ts";
-import { telegramBot } from "../libs/utils/telegram.ts";
+import { getUserChatId } from "../../libs/context/getUserChatId.ts";
+import { telegramBot } from "../../libs/utils/telegram.ts";
 
 const TD_URL =
   "https://abs2.td.gov.hk/tdab2/tdabs_external/AdminServlet_english?cmd=cmdGetOfficeBookingStatusAction&serviceTypeCode=DI&storedAppointmentExpiryDate=11-11-1901&enablePick=Y";

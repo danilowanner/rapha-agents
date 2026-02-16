@@ -3,8 +3,8 @@ import type { Context } from "hono";
 import { stream } from "hono/streaming";
 import z from "zod";
 
-import { createPoeAdapter, type PoeModelId } from "../libs/ai/providers/poe-provider.ts";
-import { env } from "../libs/env.ts";
+import { createPoeAdapter, type PoeModelId } from "../../libs/ai/providers/poe-provider.ts";
+import { env } from "../../libs/env.ts";
 
 const openAITextContentSchema = z.object({
   type: z.literal("text"),
@@ -79,7 +79,7 @@ export const chatHandler = async (c: Context) => {
             code: "invalid_request",
           },
         },
-        400
+        400,
       );
     }
 
@@ -96,7 +96,7 @@ export const chatHandler = async (c: Context) => {
             code: "model_not_supported",
           },
         },
-        400
+        400,
       );
     }
 
@@ -196,7 +196,7 @@ export const chatHandler = async (c: Context) => {
           code: "internal_error",
         },
       },
-      500
+      500,
     );
   }
 };

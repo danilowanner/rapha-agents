@@ -1,5 +1,5 @@
-import { addResponse } from "../responses/state.ts";
-import { sendTelegramResponseFile } from "../responses/telegram.ts";
+import { addResponse } from "../handlers/responses/state.ts";
+import { sendTelegramResponseFile } from "../handlers/responses/telegram.ts";
 
 async function testAIExtractionFallback() {
   console.log("Testing AI extraction fallback...\n");

@@ -8,17 +8,17 @@ import { fileURLToPath } from "node:url";
 import { env } from "../libs/env.ts";
 import { telegramBot } from "../libs/utils/telegram.ts";
 import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
-import { busHandler } from "./bus.ts";
-import { chatHandler } from "./chat.ts";
-import { filenameHandler } from "./filename.ts";
-import { memoryGetHandler, memoryPostHandler } from "./memory.ts";
-import { responseMarkdownHandler } from "./responses/md.ts";
-import { responseResultHandler } from "./responses/result.ts";
-import { responseViewHandler } from "./responses/view.tsx";
-import { startScheduler, stopScheduler } from "./scheduler.ts";
-import { summarizeHandler } from "./summarize.ts";
-import { toolsApp } from "./tools.ts";
-import { wordsmithHandler } from "./wordsmith.ts";
+import { busHandler } from "./handlers/bus.ts";
+import { filenameHandler } from "./handlers/filename.ts";
+import { chatHandler } from "./handlers/chat.ts";
+import { startScheduler, stopScheduler } from "./features/scheduler.ts";
+import { memoryGetHandler, memoryPostHandler } from "./handlers/memory.ts";
+import { responseMarkdownHandler } from "./handlers/responses/md.ts";
+import { responseResultHandler } from "./handlers/responses/result.ts";
+import { responseViewHandler } from "./handlers/responses/view.tsx";
+import { summarizeHandler } from "./handlers/summarize.ts";
+import { toolsApp } from "./handlers/tools.ts";
+import { wordsmithHandler } from "./handlers/wordsmith.ts";
 
 const app = new Hono();
 

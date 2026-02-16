@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
-import { extractFileByMarker } from "../../libs/ai/createFileTool.ts";
-import { extractFile } from "../../libs/ai/functions/extractFile.ts";
+import { extractFileByMarker } from "../../../libs/ai/createFileTool.ts";
+import { extractFile } from "../../../libs/ai/functions/extractFile.ts";
 
 const MAX_CACHED_RESPONSES = 20;
 

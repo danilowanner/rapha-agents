@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import z from "zod";
 
-import { addMemoryEntry, getMemoryAsXml } from "./wordsmith/memory.ts";
+import { addMemoryEntry, getMemoryAsXml } from "../features/memory.ts";
 
 const memoryBodySchema = z.object({
   userId: z.string().min(1),

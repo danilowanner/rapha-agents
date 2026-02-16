@@ -2,17 +2,17 @@ import { generateText, hasToolCall } from "ai";
 import type { Context } from "hono";
 import z from "zod";
 
-import { createPoeAdapter } from "../libs/ai/providers/poe-provider.ts";
-import { reasoningTool } from "../libs/ai/reasoningTool.ts";
-import { sendMessage } from "../libs/ai/sendMessageTool.ts";
-import { getUserChatId } from "../libs/context/getUserChatId.ts";
-import { env } from "../libs/env.ts";
-import { formatDateTime } from "../libs/utils/formatDateTime.ts";
-import { getErrorMessage } from "../libs/utils/getErrorMessage.ts";
-import { isDefined } from "../libs/utils/isDefined.ts";
-import { listCodec } from "../libs/utils/listCodec.ts";
-import { sendResult } from "./../libs/ai/sendResultTool.ts";
-import { addMemoryEntry, getMemoryAsXml } from "./wordsmith/memory.ts";
+import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
+import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
+import { sendMessage } from "../../libs/ai/sendMessageTool.ts";
+import { getUserChatId } from "../../libs/context/getUserChatId.ts";
+import { env } from "../../libs/env.ts";
+import { formatDateTime } from "../../libs/utils/formatDateTime.ts";
+import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
+import { isDefined } from "../../libs/utils/isDefined.ts";
+import { listCodec } from "../../libs/utils/listCodec.ts";
+import { sendResult } from "../../libs/ai/sendResultTool.ts";
+import { addMemoryEntry, getMemoryAsXml } from "../features/memory.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 

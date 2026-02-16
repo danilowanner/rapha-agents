@@ -4,10 +4,10 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ZodType } from "zod";
-import { fetchWebsite } from "../libs/ai/fetchWebsiteTool.ts";
-import { fetchYoutubeTranscript } from "../libs/ai/fetchYoutubeTranscriptTool.ts";
-import { googleSearch } from "../libs/ai/googleSearchTool.ts";
-import { getErrorMessage } from "../libs/utils/getErrorMessage.ts";
+import { fetchWebsite } from "../../libs/ai/fetchWebsiteTool.ts";
+import { fetchYoutubeTranscript } from "../../libs/ai/fetchYoutubeTranscriptTool.ts";
+import { googleSearch } from "../../libs/ai/googleSearchTool.ts";
+import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
 
 const app = new Hono();
 

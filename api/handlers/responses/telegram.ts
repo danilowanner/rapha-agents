@@ -1,10 +1,10 @@
 import { InputFile } from "grammy";
 
-import { env } from "../../libs/env.ts";
-import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
-import { markdownToTelegramHtml } from "../../libs/utils/markdownToTelegramHtml.ts";
-import { shorten } from "../../libs/utils/shorten.ts";
-import { telegramBot } from "../../libs/utils/telegram.ts";
+import { env } from "../../../libs/env.ts";
+import { getErrorMessage } from "../../../libs/utils/getErrorMessage.ts";
+import { markdownToTelegramHtml } from "../../../libs/utils/markdownToTelegramHtml.ts";
+import { shorten } from "../../../libs/utils/shorten.ts";
+import { telegramBot } from "../../../libs/utils/telegram.ts";
 import { getResponseResult } from "./state.ts";
 
 export async function sendTelegramResponseFile(chatId: number | string, responseId: string): Promise<void> {
