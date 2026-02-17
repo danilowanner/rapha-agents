@@ -11,6 +11,20 @@ export const env = {
   get telegramBotToken() {
     return z.string().min(1, "TELEGRAM_BOT_TOKEN is required").parse(process.env.TELEGRAM_BOT_TOKEN);
   },
+  get telegramFamilyBotToken() {
+    return z.string().min(1, "TELEGRAM_FAMILY_BOT_TOKEN is required").parse(process.env.TELEGRAM_FAMILY_BOT_TOKEN);
+  },
+  get telegramFamilyBotAllowedChatIds() {
+    return z
+      .string()
+      .default("")
+      .parse(process.env.TELEGRAM_FAMILY_BOT_ALLOWED_CHAT_IDS)
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value));
+  },
   get apiKey() {
     return z.string().min(1, "API_KEY is required").parse(process.env.API_KEY);
   },

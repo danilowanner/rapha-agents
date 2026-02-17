@@ -11,6 +11,7 @@ import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
 import { busHandler } from "./handlers/bus.ts";
 import { filenameHandler } from "./handlers/filename.ts";
 import { chatHandler } from "./handlers/chat.ts";
+import { startFamilyChatBot, stopFamilyChatBot } from "./features/familyChatBot.ts";
 import { startScheduler, stopScheduler } from "./features/scheduler.ts";
 import { memoryGetHandler, memoryPostHandler } from "./handlers/memory.ts";
 import { responseMarkdownHandler } from "./handlers/responses/md.ts";
@@ -50,6 +51,7 @@ app.get("/memory/:userId", memoryGetHandler);
 app.post("/chat/completions", chatHandler);
 
 // registerTask("Check Transport Department appointments", { minutes: 15 }, transportDepartmentCheckHandler);
+startFamilyChatBot();
 
 const port = parseInt(env.port, 10);
 
@@ -71,6 +73,7 @@ async function shutdown(signal: string) {
   console.log(`\nReceived ${signal}, shutting down gracefully...`);
   stopScheduler();
   await Promise.all([
+    stopFamilyChatBot().then(() => console.log("Family Telegram bot stopped")),
     telegramBot.stop().then(() => console.log("Telegram bot stopped")),
     new Promise((resolve) => server.close(() => resolve(true))).then(() => console.log("Server closed")),
   ]);
