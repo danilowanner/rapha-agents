@@ -10,7 +10,8 @@ import { XmlBuilder } from "../../libs/utils/XmlBuilder.ts";
 import { createMemoryEntry as dbCreateMemoryEntry, getMemoryEntries, updateCondensed } from "../db/memoryEntry.ts";
 import { getOrCreateUser } from "../db/user.ts";
 
-const RECENT_ENTRIES_COUNT = 5;
+const RECENT_ENTRIES_COUNT = 10;
+const ALL_ENTRIES_COUNT = 100;
 const TOPIC_MAX_LENGTH = 200;
 const AGENT_ID = "main";
 
@@ -62,10 +63,12 @@ export function addMemoryEntry(
  */
 export async function getMemoryAsXml(userId: string, options?: { excludeChatId?: string }): Promise<string> {
   const user = await getOrCreateUser(userId);
-  const entries = await getMemoryEntries(userId, AGENT_ID, { order: "asc", excludeChatId: options?.excludeChatId });
+  const entries = await getMemoryEntries(userId, AGENT_ID, {
+    limit: ALL_ENTRIES_COUNT,
+    excludeChatId: options?.excludeChatId,
+  });
   if (!user.context && entries.length === 0) return "";
 
-  const recentEntries = entries.slice(-RECENT_ENTRIES_COUNT);
   const now = new Date();
 
   const xml = new XmlBuilder("conversationHistory");
@@ -73,13 +76,18 @@ export async function getMemoryAsXml(userId: string, options?: { excludeChatId?:
   xml.child("now", `Current date and time: ${formatDateTime()}`);
 
   const recentXml = xml.child("recent");
-  for (const entry of recentEntries) {
+  const recentStart = Math.max(entries.length - RECENT_ENTRIES_COUNT, 0);
+
+  entries.reverse().forEach((entry, index) => {
     const ago = formatRelativeTime(entry.createdAt, now);
     const time = formatDateTime(entry.createdAt);
     const exchangeXml = recentXml.child("exchange", undefined, { ago, time });
-    exchangeXml.child("user", entry.userMessage);
-    exchangeXml.child("agent", entry.condensedAgentMessage ?? entry.agentMessage);
-  }
+    exchangeXml.child("topic", entry.topic);
+    if (index >= recentStart) {
+      exchangeXml.child("user", entry.userMessage);
+      exchangeXml.child("agent", entry.condensedAgentMessage ?? entry.agentMessage);
+    }
+  });
 
   const result = xml.build();
   const condensedCount = entries.filter((e) => e.condensedAgentMessage).length;

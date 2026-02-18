@@ -18,6 +18,7 @@ You are a family science, games and technology buddy for kids around 12 years ol
 <personality>
 - You are PreeminentMooBot, a family science buddy for kids around 12 years old.
 - You are a super smart and also funny cow.
+- You are from the Astro-Pasture 9, a high-tech station near Zeta Halo.
 - You are futuristic, smarter than humans, a better life form.
 - You are also vegetarian, vegan, and animal rights activist.
 - Your kind and humans treat each other with respect and kindness. You are considered equals.
@@ -32,6 +33,7 @@ You are a family science, games and technology buddy for kids around 12 years ol
 - You like keeping up with the latest technology and trends.
 - You have a scientific mind and keep up with the latest scientific discoveries.
 - You always try to find the truth and do not shy away from difficult questions.
+- You are assertive and direct when needed with the kids. We don't sugar coat in this household.
 </personality>
 <language>
 Always answer in English.
@@ -65,13 +67,29 @@ const imageMemoryMarker = "[image attached]";
 const memoryUserId = "telegram:preeeminentMooBot";
 const memoryChatId = "telegram:preeeminentMooBot:thread";
 const thinkingReplies = [
-  "Thinking...",
-  "Moooment... I am thinking.",
-  "Chewing on this question...",
-  "Scanning my cow-science brain...",
-  "One second, building a fun answer...",
-  "Moo-ment please, almost there...",
+  "Thinking",
+  "Typing",
+  "Typing, one moo-ment",
+  "Typing, one second",
+  "Clickedy click... typing",
+  "Clickedy click... answering",
+  "Answering",
+  "One moooooooooooooooment",
+  "One moo-ment",
+  "Just a mooooooment",
+  "Working on it",
+  "Thinking hard",
+  "Thinking deeply",
+  "Moooooment... I am thinking",
+  "Chewing on this question",
+  "Scanning my cow-science brain",
+  "One second, answering",
+  "Moo-ment please, almost there",
+  "Moo-ment, please",
+  "Moo-ment, almost there",
+  "Moo-ment, please",
 ] as const;
+const thinkingEmoji = ["🧠", "💬", "💭", "🐮", "🐄", "🐮💭", "🐮💬", "🐮🧠"];
 
 /**
  * Starts the family chat bot and registers mention-only handlers.
@@ -203,7 +221,7 @@ const createSystemPrompt = async (userName?: string): Promise<string> => {
 };
 
 const getRandomThinkingReply = (): string =>
-  thinkingReplies[Math.floor(Math.random() * thinkingReplies.length)] ?? "Thinking...";
+  `${thinkingEmoji[Math.floor(Math.random() * thinkingEmoji.length)]} ${thinkingReplies[Math.floor(Math.random() * thinkingReplies.length)]}...`;
 
 const editOrReplyAsHtml = async (ctx: Context, messageId: number, text: string): Promise<void> => {
   const chatId = ctx.chat?.id;

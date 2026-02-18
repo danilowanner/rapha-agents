@@ -29,20 +29,20 @@ export async function createMemoryEntry(params: CreateMemoryEntryParams): Promis
 }
 
 /**
- * Returns entries for a user and agent, ordered by createdAt.
+ * Returns entries for a user and agent, ordered by createdAt descending.
  * When excludeChatId is set, omits entries whose chatId matches (includes entries with null chatId).
  */
 export async function getMemoryEntries(
   userId: string,
   agentId: string,
-  options?: { limit?: number; order?: "asc" | "desc"; excludeChatId?: string },
+  options?: { limit?: number; excludeChatId?: string },
 ): Promise<MemoryEntry[]> {
-  const { limit, order = "desc", excludeChatId } = options ?? {};
+  const { limit = 100, excludeChatId } = options ?? {};
   const where: Prisma.MemoryEntryWhereInput =
     excludeChatId !== undefined ? { userId, agentId, chatId: { not: excludeChatId } } : { userId, agentId };
   return prisma.memoryEntry.findMany({
     where,
-    orderBy: { createdAt: order },
+    orderBy: { createdAt: "desc" },
     take: limit,
   });
 }
