@@ -34,5 +34,5 @@ export function createPoeAdapter(options: PoeOptions) {
       }
       return fetch(url, init);
     },
-  }).chatModel;
+  });
 }

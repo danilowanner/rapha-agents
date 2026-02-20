@@ -5,13 +5,13 @@ import z from "zod";
 import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
 import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
 import { sendMessage } from "../../libs/ai/sendMessageTool.ts";
+import { sendResult } from "../../libs/ai/sendResultTool.ts";
 import { getUserChatId } from "../../libs/context/getUserChatId.ts";
 import { env } from "../../libs/env.ts";
 import { formatDateTime } from "../../libs/utils/formatDateTime.ts";
 import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
 import { isDefined } from "../../libs/utils/isDefined.ts";
 import { listCodec } from "../../libs/utils/listCodec.ts";
-import { sendResult } from "../../libs/ai/sendResultTool.ts";
 import { addMemoryEntry, getMemoryAsXml } from "../features/memory.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
@@ -141,9 +141,9 @@ type MemoryInput = {
 
 const createMemoryEntry = (input: MemoryInput): { userMessage: string; agentMessage: string } => {
   const optionsStr = input.options.length > 0 ? ` [${input.options.join(", ")}]` : "";
-  const userMessage = `${input.prompt}\n\n<options>${optionsStr}</options>`;
+  const userMessage = `${input.prompt}\n\n#Options\n${optionsStr}`;
 
-  const clipboardStr = input.resultClipboard ? `\n\n<clipboard>\n${input.resultClipboard}\n</clipboard>` : "";
+  const clipboardStr = input.resultClipboard ? `\n\n#Clipboard\n${input.resultClipboard}` : "";
   const agentMessage = `${input.userMessage}${clipboardStr}`;
 
   return { userMessage, agentMessage };

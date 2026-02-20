@@ -82,6 +82,13 @@ export async function updateCondensed(id: number, condensedAgentMessage: string,
   });
 }
 
+export async function updateTopic(id: number, topic: string): Promise<void> {
+  await prisma.memoryEntry.update({
+    where: { id },
+    data: { topic },
+  });
+}
+
 /**
  * Deletes all entries for user+agent except the given ids (e.g. keep last N).
  */

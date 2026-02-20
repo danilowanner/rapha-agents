@@ -108,7 +108,7 @@ Core AI tooling that wraps the Vercel AI SDK's `tool()` function for agent capab
 - **sendMessageTool.ts**: Tool for sending messages to users via Telegram
 - **sendResultTool.ts**: Tool for sending results with optional clipboard content via Telegram
 - **providers/poe-provider.ts**: Custom Poe AI provider adapter
-- **functions/extractFile.ts**: AI-based file metadata extraction using generateObject
+- **functions/extractFile.ts**: AI-based file metadata extraction using structured output
 
 #### libs/context
 
@@ -154,23 +154,23 @@ Terminal UI components using Ink (React for CLI):
 The Poe provider wraps various AI models. Usage pattern:
 
 ```typescript
-import { generateObject, generateText } from "ai";
+import { generateText, Output } from "ai";
 import { createPoeAdapter } from "../providers/poe-provider.ts";
 import { env } from "../../env.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
-// Use with generateText
+// Plain text
 const { text } = await generateText({
   model: poe("Claude-Haiku-4.5"),
   system: "...",
   messages: [{ role: "user", content: "..." }],
 });
 
-// Use with generateObject for structured output
-const { object } = await generateObject({
+// Structured output (use generateText + Output.object, not deprecated generateObject)
+const { output } = await generateText({
   model: poe("Gemini-3-Flash"),
-  schema: zodSchema,
+  output: Output.object({ schema: zodSchema }),
   prompt: "...",
 });
 ```

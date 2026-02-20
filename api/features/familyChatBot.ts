@@ -104,7 +104,7 @@ export function startFamilyChatBot(): void {
   });
 
   familyTelegramBot.on("message:text", async (ctx) => {
-    console.log(ctx.from?.id);
+    console.log("[FAMILY CHAT BOT] Message from.id:", ctx.from?.id);
     if (!allowedChatIds.has(ctx.chat.id)) return;
     if (ctx.from?.is_bot) return;
 
