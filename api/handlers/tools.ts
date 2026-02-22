@@ -70,13 +70,16 @@ app.get("/openapi.json", (c: Context) => {
  */
 forEachTool((name, tool) => {
   app.post(`/${name.toLocaleLowerCase()}`, async (c: Context) => {
+    let rawParams: unknown;
     try {
-      const rawParams = await c.req.json();
+      rawParams = await c.req.json();
+      console.log("[OPENAPI TOOL] request", name, JSON.stringify(rawParams));
       const params = tool.inputSchema.parse(rawParams);
       if (!tool.execute) return c.json({ error: "Tool missing execution function." }, 500);
       const result = await tool.execute(params, { messages: [], toolCallId: "" });
       return c.json(result);
     } catch (error) {
+      console.error("[OPENAPI TOOL]", name, error);
       return c.text(getErrorMessage(error), 500);
     }
   });

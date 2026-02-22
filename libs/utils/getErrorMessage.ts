@@ -19,8 +19,8 @@ export const getErrorMessage = (e: unknown): string => {
 const getZodErrorMessage = (error: ZodError): string =>
   error.issues
     .map((issue) => {
-      const path = issue.path.map(String).join(".");
-      return path.length > 0 ? `${path}: ${issue.message}` : issue.message;
+      const path = issue.path.map(String).join(".") || "(root)";
+      return `ZodError at ${path}: ${issue.message}`;
     })
     .join("; ");
 
