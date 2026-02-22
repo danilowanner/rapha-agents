@@ -238,7 +238,7 @@ Use provided types from libraries whenever possible. Do not create duplicate typ
 
 ## OWUI
 
-- About functions and types of functions: https://docs.openwebui.com/features/plugin/functions/
-- Filter functions: https://docs.openwebui.com/features/plugin/functions/filter
-- Function arguments: https://docs.openwebui.com/features/plugin/development/reserved-args
+- About functions and types of functions: https://docs.openwebui.com/features/extensibility/plugin/functions/
+- Filter functions: https://docs.openwebui.com/features/extensibility/plugin/functions/filter
+- Events: https://docs.openwebui.com/features/extensibility/plugin/development/events
 - Grammy: https://grammy.dev/guide/basics

@@ -6,7 +6,7 @@ import { cors } from "hono/cors";
 import type { ZodType } from "zod";
 import { fetchWebsite } from "../../libs/ai/fetchWebsiteTool.ts";
 import { fetchYoutubeTranscript } from "../../libs/ai/fetchYoutubeTranscriptTool.ts";
-import { googleSearch } from "../../libs/ai/googleSearchTool.ts";
+import { webResearch } from "../../libs/ai/webResearchTool.ts";
 import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
 
 const app = new Hono();
@@ -16,7 +16,7 @@ app.use("/*", cors());
 const tools = {
   "Fetch-Website": fetchWebsite(null),
   "Fetch-Youtube-Transcript": fetchYoutubeTranscript(null),
-  "Google-Search": googleSearch(null),
+  "Web-Research": webResearch(null),
 };
 
 /** Tool with schemas typed as ZodType for OpenAPI compatibility. */
