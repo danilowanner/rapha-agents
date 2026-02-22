@@ -6,13 +6,18 @@ export const env = {
     return z.url("BASE_URL must be a valid URL").parse(process.env.BASE_URL);
   },
   get poeApiKey() {
-    return z.string().min(1, "POE_API_KEY is required").parse(process.env.POE_API_KEY);
+    return z
+      .string({ error: "POE_API_KEY is required" })
+      .min(1, "POE_API_KEY is required")
+      .parse(process.env.POE_API_KEY);
   },
   get telegramBotToken() {
-    return z.string().min(1, "TELEGRAM_BOT_TOKEN is required").parse(process.env.TELEGRAM_BOT_TOKEN);
+    const error = "TELEGRAM_BOT_TOKEN is required";
+    return z.string({ error }).min(1, { error }).parse(process.env.TELEGRAM_BOT_TOKEN);
   },
   get telegramFamilyBotToken() {
-    return z.string().min(1, "TELEGRAM_FAMILY_BOT_TOKEN is required").parse(process.env.TELEGRAM_FAMILY_BOT_TOKEN);
+    const error = "TELEGRAM_FAMILY_BOT_TOKEN is required";
+    return z.string({ error }).min(1, { error }).parse(process.env.TELEGRAM_FAMILY_BOT_TOKEN);
   },
   get telegramFamilyBotAllowedChatIds() {
     return z
@@ -26,7 +31,8 @@ export const env = {
       .filter((value) => Number.isFinite(value));
   },
   get apiKey() {
-    return z.string().min(1, "API_KEY is required").parse(process.env.API_KEY);
+    const error = "API_KEY is required";
+    return z.string({ error }).min(1, { error }).parse(process.env.API_KEY);
   },
   get port() {
     return z.string().default("3000").parse(process.env.PORT);
@@ -41,9 +47,11 @@ export const env = {
     return z.string().optional().parse(process.env.OXYLABS_PASSWORD);
   },
   get braveSearchApiKey() {
-    return z.string().min(1, "BRAVE_SEARCH_API_KEY is required").parse(process.env.BRAVE_SEARCH_API_KEY);
+    const error = "BRAVE_SEARCH_API_KEY is required";
+    return z.string({ error }).min(1, { error }).parse(process.env.BRAVE_SEARCH_API_KEY);
   },
   get databaseUrl() {
-    return z.string().min(1, "DATABASE_URL is required").parse(process.env.DATABASE_URL);
+    const error = "DATABASE_URL is required";
+    return z.string({ error }).min(1, { error }).parse(process.env.DATABASE_URL);
   },
 };
