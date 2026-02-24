@@ -51,7 +51,7 @@ Hono-based API server with scheduled tasks:
 
 - **Document.tsx**: HTML document wrapper for SSR
 - **MarkdownStream.tsx**: React component that fetches and renders streaming markdown using markdown-it
-- **ResponseContainer.tsx**: Container component with root element ID
+- **DocumentContainer.tsx**: Container component with root element ID and data-document payload
 
 **Client (client/):**
 

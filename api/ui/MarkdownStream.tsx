@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 const md = markdownIt();
 
-export function MarkdownStream({ responseId }: { responseId: string }) {
+export function MarkdownStream({ markdownUrl }: { markdownUrl: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -12,7 +12,7 @@ export function MarkdownStream({ responseId }: { responseId: string }) {
 
     const fetchStream = async (retry = true): Promise<void> => {
       try {
-        const response = await fetch(`/responses/md/${responseId}`);
+        const response = await fetch(markdownUrl);
         if (!response.ok || !response.body) throw new Error("Failed to fetch");
 
         const reader = response.body.getReader();
@@ -37,7 +37,7 @@ export function MarkdownStream({ responseId }: { responseId: string }) {
     };
 
     void fetchStream();
-  }, [responseId]);
+  }, [markdownUrl]);
 
   return <div ref={containerRef} />;
 }

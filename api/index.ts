@@ -8,11 +8,14 @@ import { fileURLToPath } from "node:url";
 import { env } from "../libs/env.ts";
 import { telegramBot } from "../libs/utils/telegram.ts";
 import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
-import { busHandler } from "./handlers/bus.ts";
-import { filenameHandler } from "./handlers/filename.ts";
-import { chatHandler } from "./handlers/chat.ts";
 import { startFamilyChatBot, stopFamilyChatBot } from "./features/familyChatBot.ts";
 import { startScheduler, stopScheduler } from "./features/scheduler.ts";
+import { busHandler } from "./handlers/bus.ts";
+import { chatHandler } from "./handlers/chat.ts";
+import { docMarkdownHandler } from "./handlers/docs/md.ts";
+import { docsPublishHandler } from "./handlers/docs/publish.ts";
+import { docViewHandler } from "./handlers/docs/view.tsx";
+import { filenameHandler } from "./handlers/filename.ts";
 import { memoryGetHandler, memoryPostHandler } from "./handlers/memory.ts";
 import { responseMarkdownHandler } from "./handlers/responses/md.ts";
 import { responseResultHandler } from "./handlers/responses/result.ts";
@@ -37,6 +40,9 @@ app.get("/health", (c: Context) => c.json({ status: "ok" }));
 app.get("/responses/view/:id", responseViewHandler);
 app.get("/responses/md/:id", responseMarkdownHandler);
 app.get("/responses/result/:id", responseResultHandler);
+app.get("/docs/md/:id", docMarkdownHandler);
+app.get("/docs/:id/:slug", docViewHandler);
+app.get("/docs/:id", docViewHandler);
 
 app.use("*", authHeaderMiddleware);
 
@@ -45,13 +51,15 @@ app.route("/tools", toolsApp);
 app.post("/bus", busHandler);
 app.post("/filename", filenameHandler);
 app.post("/summarize", summarizeHandler);
+app.post("/docs/publish", docsPublishHandler);
 app.post("/wordsmith", wordsmithHandler);
 app.post("/memory", memoryPostHandler);
 app.get("/memory/:userId", memoryGetHandler);
 app.post("/chat/completions", chatHandler);
 
 // registerTask("Check Transport Department appointments", { minutes: 15 }, transportDepartmentCheckHandler);
-startFamilyChatBot();
+if (env.telegramFamilyBotToken) startFamilyChatBot(env.telegramFamilyBotToken);
+else console.warn("Warning:Family Telegram bot not configured, skipping start");
 
 const port = parseInt(env.port, 10);
 

@@ -16,8 +16,7 @@ export const env = {
     return z.string({ error }).min(1, { error }).parse(process.env.TELEGRAM_BOT_TOKEN);
   },
   get telegramFamilyBotToken() {
-    const error = "TELEGRAM_FAMILY_BOT_TOKEN is required";
-    return z.string({ error }).min(1, { error }).parse(process.env.TELEGRAM_FAMILY_BOT_TOKEN);
+    return z.string().optional().parse(process.env.TELEGRAM_FAMILY_BOT_TOKEN);
   },
   get telegramFamilyBotAllowedChatIds() {
     return z

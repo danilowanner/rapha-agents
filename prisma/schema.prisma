@@ -12,7 +12,21 @@ model User {
   context   String?       @db.Text
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+  docs      Doc[]
   entries   MemoryEntry[]
+}
+
+model Doc {
+  id        String   @id
+  shortId   String   @unique
+  slug      String
+  title     String
+  markdown  String   @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  noteId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model MemoryEntry {

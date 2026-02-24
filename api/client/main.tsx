@@ -1,18 +1,30 @@
 import ReactDOM from "react-dom/client";
 
+import { rootElementId } from "../ui/DocumentContainer.tsx";
 import { MarkdownStream } from "../ui/MarkdownStream.tsx";
-import { rootElementId } from "../ui/ResponseContainer.tsx";
 
 import "./main.css";
 
+type DocumentPayload = {
+  markdownUrl: string;
+};
+
 function init() {
   const rootElement = document.getElementById(rootElementId);
-  if (!rootElement) return console.error("Root element not found");
+  const container = rootElement ?? document.body;
 
-  const responseId = rootElement.getAttribute("data-response-id");
-  if (!responseId) return console.error("Response ID not found");
+  try {
+    if (!rootElement) throw new Error("Root element not found");
+    const raw = rootElement.getAttribute("data-document");
+    if (!raw) throw new Error("Document payload not found");
+    const dataDocument = JSON.parse(raw) as DocumentPayload;
+    if (!dataDocument.markdownUrl) throw new Error("markdownUrl not found");
 
-  ReactDOM.createRoot(rootElement).render(<MarkdownStream responseId={responseId} />);
+    ReactDOM.createRoot(container).render(<MarkdownStream markdownUrl={dataDocument.markdownUrl} />);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    ReactDOM.createRoot(container).render(<div role="alert">{message}</div>);
+  }
 }
 
 if (document.readyState === "loading") {

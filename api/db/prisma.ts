@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
+  type Doc,
   type MemoryEntry,
   type Prisma,
   type User,
@@ -14,4 +15,4 @@ export const prisma: PrismaClient = globalForPrisma.prisma ?? new PrismaClient({
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-export type { MemoryEntry, Prisma, User };
+export type { Doc, MemoryEntry, Prisma, User };

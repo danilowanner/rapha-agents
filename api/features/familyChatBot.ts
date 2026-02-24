@@ -7,10 +7,9 @@ import { markdownToTelegramHtml } from "../../libs/utils/markdownToTelegramHtml.
 import { addMemoryEntry, getMemoryAsXml } from "./memory.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
-const familyTelegramBot = new Bot(env.telegramFamilyBotToken);
 const allowedChatIds = new Set(env.telegramFamilyBotAllowedChatIds);
 let botUsernamePromise: Promise<string | undefined> | null = null;
-let familyBotStarted = false;
+let familyTelegramBot: Bot | null = null;
 
 const systemPrompt = `<role>
 You are a family science, games and technology buddy for kids around 12 years old.
@@ -94,9 +93,9 @@ const thinkingEmoji = ["🧠", "💬", "💭", "🐮", "🐄", "🐮💭", "🐮
 /**
  * Starts the family chat bot and registers mention-only handlers.
  */
-export function startFamilyChatBot(): void {
-  if (familyBotStarted) return;
-  familyBotStarted = true;
+export function startFamilyChatBot(botToken: string): void {
+  if (familyTelegramBot) return;
+  familyTelegramBot = new Bot(botToken);
 
   familyTelegramBot.command("start", async (ctx) => {
     const chatId = ctx.chat.id;
@@ -107,8 +106,9 @@ export function startFamilyChatBot(): void {
     console.log("[FAMILY CHAT BOT] Message from.id:", ctx.from?.id);
     if (!allowedChatIds.has(ctx.chat.id)) return;
     if (ctx.from?.is_bot) return;
+    if (!familyTelegramBot) return;
 
-    const botUsername = await getBotUsername();
+    const botUsername = await getBotUsername(familyTelegramBot);
     if (!botUsername || !hasBotMention(ctx.message.text, botUsername)) return;
 
     const question = removeBotMention(ctx.message.text, botUsername);
@@ -127,13 +127,14 @@ export function startFamilyChatBot(): void {
   familyTelegramBot.on("message:photo", async (ctx) => {
     if (!allowedChatIds.has(ctx.chat.id)) return;
     if (ctx.from?.is_bot) return;
+    if (!familyTelegramBot) return;
 
-    const botUsername = await getBotUsername();
+    const botUsername = await getBotUsername(familyTelegramBot);
     const caption = ctx.message.caption ?? "";
     if (!botUsername || !hasBotMention(caption, botUsername)) return;
 
     const question = removeBotMention(caption, botUsername) || imageOnlyPrompt;
-    const imageBuffer = await downloadLargestPhoto(ctx);
+    const imageBuffer = await downloadLargestPhoto(ctx, familyTelegramBot);
     if (!imageBuffer) {
       await replyAsHtml(ctx, "I could not read that image. Please try another one.");
       return;
@@ -156,13 +157,12 @@ export function startFamilyChatBot(): void {
  * Stops the family chat bot.
  */
 export function stopFamilyChatBot(): Promise<void> {
-  if (!familyBotStarted) return Promise.resolve();
-  familyBotStarted = false;
+  if (!familyTelegramBot) return Promise.resolve();
   return familyTelegramBot.stop();
 }
 
-const getBotUsername = async (): Promise<string | undefined> => {
-  if (!botUsernamePromise) botUsernamePromise = familyTelegramBot.api.getMe().then((me) => me.username);
+const getBotUsername = async (bot: Bot): Promise<string | undefined> => {
+  if (!botUsernamePromise) botUsernamePromise = bot.api.getMe().then((me) => me.username);
   return botUsernamePromise;
 };
 
@@ -255,12 +255,12 @@ const formatMemoryUserMessage = (senderName: string | undefined, message: string
   return `[${senderName}] ${message}`;
 };
 
-const downloadLargestPhoto = async (ctx: Context): Promise<Buffer | null> => {
+const downloadLargestPhoto = async (ctx: Context, bot: Bot): Promise<Buffer | null> => {
   const largestPhoto = ctx.message?.photo?.at(-1);
   if (!largestPhoto) return null;
 
   try {
-    const file = await familyTelegramBot.api.getFile(largestPhoto.file_id);
+    const file = await bot.api.getFile(largestPhoto.file_id);
     if (!file.file_path) return null;
 
     const fileUrl = `https://api.telegram.org/file/bot${env.telegramFamilyBotToken}/${file.file_path}`;
