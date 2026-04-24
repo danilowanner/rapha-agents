@@ -177,8 +177,7 @@ const { output } = await generateText({
 
 **Available models** (use exact string values):
 
-- `"Claude-Sonnet-4.5"`, `"Claude-Haiku-4.5"`
-- `"Gemini-3-Flash"`
+- `"Claude-Sonnet-4.6"`, `"Claude-Haiku-4.5"`
 - Full list in types of createPoeAdapter
 
 ## Deployment

@@ -26,7 +26,7 @@ Make the content realistic and cohesive, like a mini product changelog or featur
 
 export function createTestResponse() {
   const result = streamText({
-    model: poe("Claude-Sonnet-4.5"),
+    model: poe("Claude-Sonnet-4.6"),
     messages: [{ role: "user" as const, content }],
     tools: {},
   });

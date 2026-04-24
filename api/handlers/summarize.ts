@@ -69,7 +69,7 @@ export const summarizeHandler = async (c: Context) => {
     const userMessageContent = await buildUserMessageContent(text, file);
 
     const result = streamText({
-      model: poe("Claude-Sonnet-4.5"),
+      model: poe("Claude-Sonnet-4.6"),
       messages: [{ role: "user" as const, content: userMessageContent }],
       system: getSystemPrompt(),
       tools: {

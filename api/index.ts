@@ -11,7 +11,6 @@ import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
 import { startFamilyChatBot, stopFamilyChatBot } from "./features/familyChatBot.ts";
 import { startScheduler, stopScheduler } from "./features/scheduler.ts";
 import { busHandler } from "./handlers/bus.ts";
-import { chatHandler } from "./handlers/chat.ts";
 import { docMarkdownHandler } from "./handlers/docs/md.ts";
 import { docsPublishHandler } from "./handlers/docs/publish.ts";
 import { docViewHandler } from "./handlers/docs/view.tsx";
@@ -55,7 +54,6 @@ app.post("/docs/publish", docsPublishHandler);
 app.post("/wordsmith", wordsmithHandler);
 app.post("/memory", memoryPostHandler);
 app.get("/memory/:userId", memoryGetHandler);
-app.post("/chat/completions", chatHandler);
 
 // registerTask("Check Transport Department appointments", { minutes: 15 }, transportDepartmentCheckHandler);
 if (env.telegramFamilyBotToken) startFamilyChatBot(env.telegramFamilyBotToken);

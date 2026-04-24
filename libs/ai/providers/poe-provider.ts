@@ -7,9 +7,10 @@ export type PoeModelId =
   | "GPT-5-nano"
   | "Gemini-3-Flash"
   | "Gemini-3-Pro"
-  | "Claude-Opus-4.5"
+  | "Claude-Opus-4.7"
+  | "Claude-Opus-4.6"
+  | "Claude-Sonnet-4.6"
   | "Claude-Haiku-4.5"
-  | "Claude-Sonnet-4.5"
   | "Grok-4"
   | "DeepSeek-R1";
 

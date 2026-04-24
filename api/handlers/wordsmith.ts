@@ -72,7 +72,7 @@ export const wordsmithHandler = async (c: Context) => {
     ].filter(isDefined);
 
     const data = await generateText({
-      model: poe("Claude-Sonnet-4.5"),
+      model: poe("Claude-Sonnet-4.6"),
       messages: [{ role: "user" as const, content: userMessageContent }],
       system: await getSystemPrompt(options, user),
       tools: {
