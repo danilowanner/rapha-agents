@@ -1,8 +1,7 @@
 """
 title: Memory Filter
-author: open-webui
-author_url: https://github.com/open-webui
-funding_url: https://github.com/open-webui
+author: Danilo
+author_url: https://github.com/danilowanner
 version: 0.1
 """
 
