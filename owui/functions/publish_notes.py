@@ -2,7 +2,7 @@
 title: Publish Notes
 author: Danilo
 author_url: https://github.com/danilowanner
-version: 0.1
+version: 0.2
 """
 
 import json
@@ -41,43 +41,32 @@ class Pipe:
             return "Docs publish configuration missing: API URL not set."
 
         meta = __metadata__ or {}
-        parent = meta.get("parent_message") or {}
-        files = parent.get("files") or []
-        chat_id = str(meta.get("chat_id") or "")
-        message_id = str(meta.get("message_id") or "")
-
-        user_email = ((__user__ or {}).get("email") or "") or (
-            ((parent.get("user") or {}).get("email")) or ""
-        )
-
+        user_message = _as_dict(meta.get("user_message") or body.get("user_message"))
+        files = [f for f in _as_list(user_message.get("files")) if isinstance(f, dict)]
         if not files:
-            return "No files found on the parent message; nothing was published."
+            return "No files found on the user message; nothing was published."
+
+        sources = [s for s in _as_list(meta.get("sources")) if isinstance(s, dict)]
+        chat_id = str(meta.get("chat_id") or body.get("chat_id") or "")
+        message_id = str(meta.get("message_id") or body.get("user_message_id") or user_message.get("id") or "")
+        user_email = str((__user__ or {}).get("email") or _as_dict(user_message.get("user")).get("email") or "")
 
         await _emit_status(__event_emitter__, f"Publishing {len(files)} note(s) to Docs...", done=False)
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
 
         results: list[dict[str, Any]] = []
         for file in files:
             file_id = str(file.get("id") or "")
-            title = str(
-                file.get("title") or file.get("name") or f"Untitled {file_id}".strip()
-            )
-            markdown = (
-                ((file.get("data") or {}).get("content") or {}).get("md") or ""
-            )
+            title = str(file.get("title") or file.get("name") or f"Untitled {file_id}")
+            markdown = _find_source_markdown(file=file, sources=sources)
 
-            if not markdown or not isinstance(markdown, str):
+            if not markdown:
                 results.append({"title": title, "success": False, "url": "", "error": "Missing markdown content"})
                 await _emit_notification(__event_emitter__, f"Failed to publish note '{title}': Missing markdown content")
                 continue
 
             success, url, error = _post_note(
                 url=api_url,
-                headers=headers,
+                api_key=api_key,
                 title=title,
                 markdown=markdown,
                 user_email=user_email,
@@ -85,27 +74,41 @@ class Pipe:
                 chat_id=chat_id,
                 message_id=message_id,
             )
-
             results.append({"title": title, "success": success, "url": url, "error": error})
             if not success:
                 await _emit_notification(__event_emitter__, f"Failed to publish note '{title}': {error}")
 
         await _emit_status(__event_emitter__, "Docs publish completed.", done=True)
 
-        lines: list[str] = ["## Published notes", ""]
+        lines = ["## Published notes", ""]
         for r in results:
-            t = r["title"] or "Untitled"
+            title = r["title"] or "Untitled"
             if r["success"] and r["url"]:
-                lines.append(f"- [{t}]({r['url']})")
+                lines.append(f"- [{title}]({r['url']})")
             else:
-                err = r["error"] or "Unknown error"
-                lines.append(f"- {t} — Failed: {err}")
+                lines.append(f"- {title} — Failed: {r['error'] or 'Unknown error'}")
         return "\n".join(lines)
 
 
+def _find_source_markdown(file: dict[str, Any], sources: list[dict[str, Any]]) -> str:
+    file_id = str(file.get("id") or "")
+    updated_at = file.get("updated_at")
+    for source in sources:
+        info = _as_dict(source.get("source"))
+        if str(info.get("id") or "") != file_id:
+            continue
+        if info.get("updated_at") != updated_at:
+            continue
+        document = _as_list(source.get("document"))
+        markdown = document[0] if document else ""
+        return markdown if isinstance(markdown, str) else ""
+    return ""
+
+
 def _post_note(
+    *,
     url: str,
-    headers: dict[str, str],
+    api_key: str,
     title: str,
     markdown: str,
     user_email: str,
@@ -121,12 +124,15 @@ def _post_note(
         "chatId": chat_id,
         "messageId": message_id,
     }
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+        method="POST",
+    )
     try:
         with urllib.request.urlopen(req, timeout=10) as response:
-            resp = json.loads(response.read().decode("utf-8"))
-            public_url = resp.get("url") or ""
+            public_url = json.loads(response.read().decode("utf-8")).get("url") or ""
             if not public_url:
                 return False, "", "Docs API response did not contain a 'url' field."
             return True, public_url, ""
@@ -137,20 +143,18 @@ def _post_note(
 async def _emit_status(emitter: Any, description: str, done: bool = True) -> None:
     if not emitter:
         return
-    await emitter(
-        {
-            "type": "status",
-            "data": {"description": description, "done": done, "hidden": False},
-        }
-    )
+    await emitter({"type": "status", "data": {"description": description, "done": done, "hidden": False}})
 
 
 async def _emit_notification(emitter: Any, content: str) -> None:
     if not emitter:
         return
-    await emitter(
-        {
-            "type": "notification",
-            "data": {"type": "error", "content": content},
-        }
-    )
+    await emitter({"type": "notification", "data": {"type": "error", "content": content}})
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value: object) -> list[Any]:
+    return value if isinstance(value, list) else []
