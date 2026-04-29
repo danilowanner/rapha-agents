@@ -2,7 +2,7 @@
 title: Context Trim Filter
 author: Danilo
 author_url: https://github.com/danilowanner
-version: 0.2
+version: 0.3
 """
 
 from dataclasses import dataclass
@@ -49,6 +49,10 @@ class Filter:
             default=800,
             description="Fixed token estimate per file part.",
         )
+        keep_last_n_tool_rounds: int = Field(
+            default=0,
+            description="Number of recent completed user→assistant rounds whose tool_calls and tool results are preserved. 0 = strip all prior tool context.",
+        )
 
     def __init__(self):
         self.valves = self.Valves()
@@ -63,7 +67,7 @@ class Filter:
             return body
 
         messages = body.get("messages", [])
-        result = _trim_tool_context(messages)
+        result = _trim_tool_context(messages, self.valves.keep_last_n_tool_rounds)
         stats = _compute_stats(result)
         est_tokens = _estimate_tokens(stats, self.valves)
 
@@ -84,15 +88,15 @@ class Filter:
         return body
 
 
-def _trim_tool_context(messages: list[dict]) -> list[dict]:
-    last_user_idx = _find_last_user_index(messages)
-    if last_user_idx is None:
+def _trim_tool_context(messages: list[dict], keep_last_n_rounds: int = 0) -> list[dict]:
+    cutoff_idx = _find_trim_cutoff_index(messages, keep_last_n_rounds)
+    if cutoff_idx is None:
         return [dict(msg) for msg in messages]
 
     result: list[dict] = []
     for i, msg in enumerate(messages):
         copy = dict(msg)
-        if i < last_user_idx:
+        if i < cutoff_idx:
             if msg.get("role") == "tool":
                 continue
             if msg.get("role") == "assistant" and copy.get("tool_calls"):
@@ -101,11 +105,12 @@ def _trim_tool_context(messages: list[dict]) -> list[dict]:
     return result
 
 
-def _find_last_user_index(messages: list[dict]) -> Optional[int]:
-    for i in range(len(messages) - 1, -1, -1):
-        if messages[i].get("role") == "user":
-            return i
-    return None
+def _find_trim_cutoff_index(messages: list[dict], keep_last_n_rounds: int) -> Optional[int]:
+    user_indices = [i for i, m in enumerate(messages) if m.get("role") == "user"]
+    if not user_indices:
+        return None
+    keep_from_user = max(0, len(user_indices) - 1 - keep_last_n_rounds)
+    return user_indices[keep_from_user]
 
 
 def _content_stats(content: Any) -> tuple[int, int, int, int]:
