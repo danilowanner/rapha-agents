@@ -88,7 +88,6 @@ export async function getMemoryAsXml(userId: string, options?: { excludeChatId?:
 
   const result = xml.build();
   const condensedCount = entries.filter((e) => e.condensedAgentMessage).length;
-  console.debug(result);
   console.log(`[MEMORY] ${userId}: ${result.length} chars, ${condensedCount}/${entries.length} condensed/entries`);
   return result;
 }
