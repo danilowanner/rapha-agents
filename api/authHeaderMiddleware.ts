@@ -1,14 +1,14 @@
 import type { Context, Next } from "hono";
 
 import { env } from "../libs/env.ts";
+import { isValidAccessToken } from "./features/accessTokens.ts";
 
 export const authHeaderMiddleware = async (c: Context, next: Next) => {
-  const authHeader = c.req.header("Authorization");
-  const token = authHeader?.replace("Bearer ", "");
+  const bearerToken = c.req.header("Authorization")?.replace("Bearer ", "");
+  if (bearerToken === env.apiKey) return next();
 
-  if (!token || token !== env.apiKey) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
+  const accessToken = c.req.query("token");
+  if (accessToken && isValidAccessToken(accessToken)) return next();
 
-  return next();
+  return c.json({ error: "Unauthorized" }, 401);
 };

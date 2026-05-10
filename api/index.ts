@@ -10,6 +10,9 @@ import { telegramBot } from "../libs/utils/telegram.ts";
 import { authHeaderMiddleware } from "./authHeaderMiddleware.ts";
 import { startFamilyChatBot, stopFamilyChatBot } from "./features/familyChatBot.ts";
 import { startScheduler, stopScheduler } from "./features/scheduler.ts";
+import { appHandler } from "./handlers/app.tsx";
+import { appDataHandler } from "./handlers/appData.ts";
+import { authHandler } from "./handlers/auth.ts";
 import { busHandler } from "./handlers/bus.ts";
 import { docMarkdownHandler } from "./handlers/docs/md.ts";
 import { docsPublishHandler } from "./handlers/docs/publish.ts";
@@ -36,6 +39,7 @@ app.use(
 );
 app.get("/", (c: Context) => c.json({ message: "Hello, World!" }));
 app.get("/health", (c: Context) => c.json({ status: "ok" }));
+
 app.get("/responses/view/:id", responseViewHandler);
 app.get("/responses/md/:id", responseMarkdownHandler);
 app.get("/responses/result/:id", responseResultHandler);
@@ -47,6 +51,9 @@ app.use("*", authHeaderMiddleware);
 
 app.route("/tools", toolsApp);
 
+app.get("/app", appHandler);
+app.post("/app-data", appDataHandler);
+app.post("/auth", authHandler);
 app.post("/bus", busHandler);
 app.post("/filename", filenameHandler);
 app.post("/summarize", summarizeHandler);

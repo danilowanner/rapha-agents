@@ -136,6 +136,7 @@ export const summarizeHandler = async (c: Context) => {
           },
         },
       }),
+      { userId: user },
     );
     console.log(`[RESPONSE CREATED] ID: ${responseId}`);
 

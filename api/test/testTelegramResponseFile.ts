@@ -11,7 +11,7 @@ async function testAIExtractionFallback() {
     },
   });
 
-  const responseId = addResponse(stream);
+  const responseId = addResponse(stream, { userId: "test" });
   console.log(`Created response ID: ${responseId}`);
 
   await new Promise((resolve) => setTimeout(resolve, 1000));

@@ -14,12 +14,12 @@
     },
     {
       "type": "shell",
-      "command": "npm run build-api -- -w",
+      "command": "npm run build-api-client -- -w",
       "icon": {
         "color": "terminal.ansiCyan",
         "id": "combine"
       },
-      "label": "Run build-api (watch mode)",
+      "label": "Run build-api-client (watch mode)",
       "detail": "Run API client build in watch mode"
     },
     {

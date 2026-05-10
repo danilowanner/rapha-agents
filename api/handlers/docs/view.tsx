@@ -2,8 +2,7 @@ import type { Context } from "hono";
 import { renderToString } from "react-dom/server";
 
 import { prisma } from "../../db/prisma.ts";
-import { Document } from "../../ui/Document.tsx";
-import { DocumentContainer } from "../../ui/DocumentContainer.tsx";
+import { ClientApp } from "../../ui/ClientApp.tsx";
 
 /**
  * Serves HTML view for a doc by shortId; fetches markdown from /docs/md/:shortId.
@@ -19,11 +18,8 @@ export async function docViewHandler(c: Context) {
     return c.redirect(`/docs/${shortId}/${doc.slug}`, 302);
   }
 
-  const documentPayload = { markdownUrl: `/docs/md/${shortId}` };
   const html = renderToString(
-    <Document title={doc.title}>
-      <DocumentContainer dataDocument={documentPayload} />
-    </Document>,
+    <ClientApp payload={{ view: "markdown", title: doc.title, markdownUrl: `/docs/md/${shortId}` }} />,
   );
 
   return c.html(`<!DOCTYPE html>${html}`);

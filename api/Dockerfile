@@ -11,7 +11,7 @@ COPY api ./api
 COPY libs ./libs
 
 RUN npx prisma generate
-RUN npm run build-api
+RUN npm run build-api-client
 
 FROM node:24-bookworm-slim
 

@@ -2,8 +2,7 @@ import type { Context } from "hono";
 import { renderToString } from "react-dom/server";
 
 import { createTestResponse } from "../../test/utils/createTestResponse.ts";
-import { Document } from "../../ui/Document.tsx";
-import { DocumentContainer } from "../../ui/DocumentContainer.tsx";
+import { ClientApp } from "../../ui/ClientApp.tsx";
 import { addResponse, hasResponse } from "./state.ts";
 
 /**
@@ -13,13 +12,11 @@ export const responseViewHandler = (c: Context) => {
   console.log("[RESPONSES/VIEW]", c.req.param("id"));
   let id = c.req.param("id");
 
-  if (id === "test") id = addResponse(createTestResponse());
+  if (id === "test") id = addResponse(createTestResponse(), { userId: "test" });
   if (!hasResponse(id)) return c.text("Response not found", 404);
 
   const html = renderToString(
-    <Document title="Rapha Studio API">
-      <DocumentContainer dataDocument={{ markdownUrl: `/responses/md/${id}` }} />
-    </Document>
+    <ClientApp payload={{ view: "markdown", title: "Rapha Studio API", markdownUrl: `/responses/md/${id}` }} />,
   );
 
   return c.html(`<!DOCTYPE html>${html}`);

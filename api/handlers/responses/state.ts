@@ -7,16 +7,21 @@ const MAX_CACHED_RESPONSES = 20;
 interface ResponseEntry {
   buffer: ResponseBuffer;
   createdAt: Date;
+  userId: string;
 }
+
+type AddResponseOptions = {
+  userId: string;
+};
 
 const responses = new Map<string, ResponseEntry>();
 
 /**
  * Adds a new response stream and returns a unique ID.
  */
-export const addResponse = (stream: ReadableStream<string>): string => {
+export const addResponse = (stream: ReadableStream<string>, options: AddResponseOptions): string => {
   const id = crypto.randomUUID();
-  responses.set(id, { buffer: new ResponseBuffer(stream), createdAt: new Date() });
+  responses.set(id, { buffer: new ResponseBuffer(stream), createdAt: new Date(), userId: options.userId });
   pruneOldResponses();
   return id;
 };
@@ -53,6 +58,28 @@ export const getResponseResult = async (id: string): Promise<FileResult | null> 
  */
 export const getResponseCreatedAt = (id: string): Date | null => {
   return responses.get(id)?.createdAt ?? null;
+};
+
+export type RecentResponsesOptions = {
+  limit?: number;
+  userId?: string;
+};
+
+/**
+ * Lists recent response views from the in-memory response cache.
+ */
+export const getRecentResponses = (options: RecentResponsesOptions = {}) => {
+  const limit = options.limit ?? MAX_CACHED_RESPONSES;
+  return [...responses.entries()]
+    .filter(([, entry]) => !options.userId || entry.userId === options.userId)
+    .sort(([, a], [, b]) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, limit)
+    .map(([id, entry]) => ({
+      id,
+      createdAt: entry.createdAt.toISOString(),
+      url: `/responses/view/${id}`,
+      userId: entry.userId,
+    }));
 };
 
 /**
