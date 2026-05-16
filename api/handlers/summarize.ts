@@ -14,7 +14,7 @@ import { fileToImageBuffers } from "../../libs/utils/fileToImageBuffers.ts";
 import { fileToText } from "../../libs/utils/fileToText.ts";
 import { formatDateTime } from "../../libs/utils/formatDateTime.ts";
 import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
-import { addResponse } from "./responses/state.ts";
+import { addResponse, createResponseId } from "./responses/state.ts";
 import { sendTelegramResponseFile } from "./responses/telegram.ts";
 
 const MAX_PDF_PAGES = 20;
@@ -69,7 +69,7 @@ export const summarizeHandler = async (c: Context) => {
     const userMessageContent = await buildUserMessageContent(text, file);
 
     const result = streamText({
-      model: poe("Claude-Sonnet-4.6"),
+      model: poe("claude-sonnet-4.6"),
       messages: [{ role: "user" as const, content: userMessageContent }],
       system: getSystemPrompt(),
       tools: {
@@ -101,7 +101,9 @@ export const summarizeHandler = async (c: Context) => {
       console.log("[FINISHED]", reason);
     });
 
-    const responseId = addResponse(
+    const responseId = createResponseId();
+    addResponse(
+      responseId,
       createResponseStream(result.fullStream, {
         handlers: {
           onToolCall: (chunk) => {

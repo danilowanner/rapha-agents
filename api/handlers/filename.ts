@@ -51,7 +51,7 @@ export async function filenameHandler(c: Context) {
     content.push(...imageBuffers.map((buffer) => ({ type: "image" as const, image: buffer })));
 
     const { text } = await generateText({
-      model: poe("Claude-Haiku-4.5"),
+      model: poe("claude-haiku-4.5"),
       system: systemPrompt(userPrompt),
       messages: [
         {

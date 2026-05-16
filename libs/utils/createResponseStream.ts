@@ -4,6 +4,8 @@ import { getErrorMessage } from "./getErrorMessage.ts";
 
 type ToolCallChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-call" }>;
 type ToolResultChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-result" }>;
+type ToolErrorChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-error" }>;
+type ReasoningStartChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "reasoning-start" }>;
 type ErrorChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "error" }>;
 
 type MarkerResult = { marker: string };
@@ -13,8 +15,10 @@ const isMarkerResult = (result: HandlerResult): result is MarkerResult =>
   result !== null && typeof result === "object" && "marker" in result;
 
 type StreamHandlers<TOOLS extends ToolSet> = {
+  onReasoningStart?: (chunk: ReasoningStartChunk<TOOLS>) => HandlerResult;
   onToolCall?: (chunk: ToolCallChunk<TOOLS>) => HandlerResult;
   onToolResult?: (chunk: ToolResultChunk<TOOLS>) => HandlerResult;
+  onToolError?: (chunk: ToolErrorChunk<TOOLS>) => HandlerResult;
   onError?: (chunk: ErrorChunk<TOOLS>) => HandlerResult;
 };
 
@@ -42,33 +46,47 @@ export const createResponseStream = <TOOLS extends ToolSet>(
         controller.enqueue(text);
         if (hooks?.onComplete) chunks.push(text);
       };
+
+      const enqueueHandlerResult = (result: HandlerResult) => {
+        if (!result) return;
+        const text = isMarkerResult(result) ? result.marker : result;
+        enqueue(`\n\n${text}\n\n`);
+      };
+
       try {
         for await (const chunk of fullStream) {
           switch (chunk.type) {
+            case "reasoning-start": {
+              const result = handlers.onReasoningStart?.(chunk);
+              enqueueHandlerResult(result ?? null);
+              break;
+            }
+
             case "text-delta":
               if (chunk.text) enqueue(chunk.text);
               break;
 
             case "tool-call": {
               const result = handlers.onToolCall?.(chunk);
-              if (!result) break;
-              const text = isMarkerResult(result) ? result.marker : result;
-              enqueue(`\n\n${text}\n\n`);
+              enqueueHandlerResult(result ?? null);
               break;
             }
 
             case "tool-result": {
               const result = handlers.onToolResult?.(chunk);
-              if (!result) break;
-              const text = isMarkerResult(result) ? result.marker : result;
-              enqueue(`\n\n${text}\n\n`);
+              enqueueHandlerResult(result ?? null);
+              break;
+            }
+
+            case "tool-error": {
+              const result = handlers.onToolError?.(chunk);
+              enqueueHandlerResult(result ?? null);
               break;
             }
 
             case "error": {
               const result = handlers.onError?.(chunk) ?? `⚠️ Error: ${chunk.error}`;
-              const text = isMarkerResult(result) ? result.marker : result;
-              enqueue(`\n\n${text}\n\n`);
+              enqueueHandlerResult(result);
               break;
             }
           }

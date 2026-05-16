@@ -6,6 +6,7 @@ const MAX_CACHED_RESPONSES = 20;
 
 interface ResponseEntry {
   buffer: ResponseBuffer;
+  clipboard?: string;
   createdAt: Date;
   userId: string;
 }
@@ -17,13 +18,16 @@ type AddResponseOptions = {
 const responses = new Map<string, ResponseEntry>();
 
 /**
- * Adds a new response stream and returns a unique ID.
+ * Creates a unique response ID before the response stream exists.
  */
-export const addResponse = (stream: ReadableStream<string>, options: AddResponseOptions): string => {
-  const id = crypto.randomUUID();
+export const createResponseId = (): string => crypto.randomUUID();
+
+/**
+ * Adds a response stream for a pre-created ID.
+ */
+export const addResponse = (id: string, stream: ReadableStream<string>, options: AddResponseOptions): void => {
   responses.set(id, { buffer: new ResponseBuffer(stream), createdAt: new Date(), userId: options.userId });
   pruneOldResponses();
-  return id;
 };
 
 /**
@@ -38,6 +42,25 @@ export const getResponseStream = (id: string): ReadableStream<string> | null => 
  */
 export const hasResponse = (id: string): boolean => {
   return responses.has(id);
+};
+
+/**
+ * Adds clipboard content to an existing response.
+ */
+export const addClipboard = (id: string, clipboard: string): boolean => {
+  const response = responses.get(id);
+  if (!response) return false;
+  response.clipboard = clipboard;
+  return true;
+};
+
+/**
+ * Returns clipboard content for a response.
+ */
+export const getResponseClipboard = (id: string): string | null => {
+  const response = responses.get(id);
+  if (!response) return null;
+  return response.clipboard ?? "";
 };
 
 type FileResult = {

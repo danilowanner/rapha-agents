@@ -1,39 +1,33 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createPoe } from "ai-sdk-provider-poe";
 
 export type PoeModelId =
-  | "GPT-5.2-Instant"
-  | "GPT-5.2-Pro"
-  | "GPT-5.2"
-  | "GPT-5-nano"
-  | "Gemini-3-Flash"
-  | "Gemini-3-Pro"
-  | "Claude-Opus-4.7"
-  | "Claude-Opus-4.6"
-  | "Claude-Sonnet-4.6"
-  | "Claude-Haiku-4.5"
-  | "Grok-4"
-  | "DeepSeek-R1";
+  | "gpt-5.2-instant"
+  | "gpt-5.2-pro"
+  | "gpt-5.2"
+  | "gpt-5-nano"
+  | "gemini-3-flash"
+  | "gemini-3-pro"
+  | "claude-opus-4.7"
+  | "claude-opus-4.6"
+  | "claude-sonnet-4.6"
+  | "claude-haiku-4.5"
+  | "grok-4"
+  | "deepseek-r1";
 
 type PoeOptions = {
   apiKey: string;
-  webSearch?: boolean;
 };
 
+const providerCache = new Map<string, ReturnType<typeof createPoe>>();
+
 export function createPoeAdapter(options: PoeOptions) {
-  return createOpenAICompatible<PoeModelId, string, string, string>({
-    name: "poe",
-    baseURL: "https://api.poe.com/v1",
-    apiKey: options.apiKey,
-    fetch: async (url, init) => {
-      if (options.webSearch && init?.body) {
-        const body = JSON.parse(init.body as string);
-        body.web_search = true;
-        return fetch(url, {
-          ...init,
-          body: JSON.stringify(body),
-        });
-      }
-      return fetch(url, init);
-    },
-  });
+  const poe =
+    providerCache.get(options.apiKey) ??
+    createPoe({
+      apiKey: options.apiKey,
+    });
+
+  providerCache.set(options.apiKey, poe);
+
+  return (modelId: PoeModelId) => poe(modelId);
 }

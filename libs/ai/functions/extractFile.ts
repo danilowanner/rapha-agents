@@ -30,7 +30,7 @@ export async function extractFile(response: string): Promise<FileResult | null> 
     const truncated = response.slice(0, TRUNCATE_LENGTH);
 
     const { text } = await generateText({
-      model: poe("Claude-Haiku-4.5"),
+      model: poe("claude-haiku-4.5"),
       prompt: `Extract file metadata from this AI response. Return ONLY a JSON object, no markdown, no explanation.
 
 JSON schema:

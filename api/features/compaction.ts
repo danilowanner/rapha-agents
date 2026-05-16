@@ -7,7 +7,7 @@ import { env } from "../../libs/env.ts";
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 
 const model = wrapLanguageModel({
-  model: poe("Claude-Haiku-4.5"),
+  model: poe("claude-haiku-4.5"),
   middleware: extractJsonMiddleware(),
 });
 

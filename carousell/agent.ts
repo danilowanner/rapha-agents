@@ -103,7 +103,7 @@ type TaskProps = {
 };
 
 async function task(task: TaskProps) {
-  const { prompt, stepLimit = 6, toolNames, system = getSystem(["base", "pages"]), model = "GPT-5.2" } = task;
+  const { prompt, stepLimit = 6, toolNames, system = getSystem(["base", "pages"]), model = "gpt-5.2" } = task;
   try {
     const selectedTools = toolNames.reduce(
       (acc, name) => {

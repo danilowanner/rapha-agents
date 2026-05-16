@@ -1,20 +1,26 @@
-import { generateText, hasToolCall } from "ai";
+import { stepCountIs, streamText } from "ai";
 import type { Context } from "hono";
 import z from "zod";
 
 import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
 import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
-import { sendMessage } from "../../libs/ai/sendMessageTool.ts";
-import { sendResult } from "../../libs/ai/sendResultTool.ts";
+import { setClipboard, setClipboardToolName } from "../../libs/ai/setClipboardTool.ts";
 import { getUserChatId } from "../../libs/context/getUserChatId.ts";
 import { env } from "../../libs/env.ts";
+import { createResponseStream } from "../../libs/utils/createResponseStream.ts";
 import { formatDateTime } from "../../libs/utils/formatDateTime.ts";
 import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
 import { isDefined } from "../../libs/utils/isDefined.ts";
 import { listCodec } from "../../libs/utils/listCodec.ts";
 import { addMemoryEntry, getMemoryAsXml } from "../features/memory.ts";
+import { addClipboard, addResponse, createResponseId, getResponseClipboard } from "./responses/state.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const poeProviderOptions = {
+  poe: {
+    reasoningBudgetTokens: 1024,
+  },
+} as const;
 
 const allOptions = ["Translate", "Screen", "Translate Screen", "Reply", "Format for Whatsapp", "Think First"] as const;
 
@@ -28,15 +34,10 @@ const inputSchema = z.object({
 });
 
 type Response = {
-  userMessage: string;
-  clipboard?: string;
-  reasoning?: Array<{ title: string; details: string }>;
-  usage?: Record<string, unknown>;
-  totalUsage?: Record<string, unknown>;
+  responseId?: string;
+  error?: string;
 };
 
-const sendMessageToolName = "sendMessage";
-const sendResultToolName = "sendResult";
 const reasoningToolName = "addAReasoningStep";
 
 export const wordsmithHandler = async (c: Context) => {
@@ -44,7 +45,7 @@ export const wordsmithHandler = async (c: Context) => {
     const contentType = c.req.header("content-type") || "";
 
     if (!contentType.includes("multipart/form-data")) {
-      return c.json<Response>(warningResponse("Error: Content-Type must be multipart/form-data"));
+      return c.json<Response>({ error: "Error: Content-Type must be multipart/form-data" }, 400);
     }
 
     const formData = await c.req.formData();
@@ -55,7 +56,7 @@ export const wordsmithHandler = async (c: Context) => {
     });
 
     if (!inputParsed.success) {
-      return c.json<Response>(warningResponse(`Error: Invalid input.\n${inputParsed.error.message}`));
+      return c.json<Response>({ error: `Error: Invalid input.\n${inputParsed.error.message}` }, 400);
     }
 
     const { prompt, user, options } = inputParsed.data;
@@ -71,65 +72,74 @@ export const wordsmithHandler = async (c: Context) => {
       imageBuffer ? { type: "image" as const, image: imageBuffer } : null,
     ].filter(isDefined);
 
-    const data = await generateText({
-      model: poe("Claude-Sonnet-4.6"),
+    const responseId = createResponseId();
+    const result = streamText({
+      model: poe("claude-sonnet-4.6"),
       messages: [{ role: "user" as const, content: userMessageContent }],
       system: await getSystemPrompt(options, user),
       tools: {
-        [sendMessageToolName]: sendMessage(async ({ userMessage }) => {
-          console.log(`[MESSAGE] ${userMessage}`);
-        }, chatId),
-        [sendResultToolName]: sendResult(async ({ userMessage, resultClipboard }) => {
-          console.log(`[RESULT] ${userMessage}`);
-          console.log(`[CLIPBOARD] ${resultClipboard}`);
-        }, chatId),
+        [setClipboardToolName]: setClipboard(({ content }) => {
+          const success = addClipboard(responseId, content);
+          console.log(`[CLIPBOARD] ${responseId}: ${content.length} chars`);
+          return success;
+        }),
         [reasoningToolName]: reasoningTool(async ({ title, details }) => {
           console.log(`[REASONING] ${title}\n${details}`);
         }, chatId),
       },
-      toolChoice: "required",
-      stopWhen: hasToolCall(sendResultToolName),
+      stopWhen: stepCountIs(6),
+      providerOptions: poeProviderOptions,
     });
 
-    console.log("[FINISHED]", data.finishReason);
-
-    const allToolCalls = data.steps.flatMap((step) => step.toolCalls).filter((call) => !call.dynamic);
-    const reasoningSteps = allToolCalls.filter((call) => call.toolName === reasoningToolName).map((c) => c.input);
-    const result = allToolCalls.find((call) => call.toolName === sendResultToolName)?.input;
-
-    if (!result) {
-      console.debug(data.content);
-      return c.json<Response>(
-        warningResponse(`Error: No result generated. ${sendResultToolName} tool was not called.`),
-      );
-    }
-
-    addMemoryEntry(
-      user,
-      createMemoryEntry({
-        prompt: prompt,
-        options,
-        ...result,
+    addResponse(
+      responseId,
+      createResponseStream(result.fullStream, {
+        handlers: {
+          onReasoningStart: () => "🤔 Thinking...",
+          onToolCall: (chunk) => {
+            if (chunk.dynamic) return null;
+            switch (chunk.toolName) {
+              case setClipboardToolName:
+                return formatClipboardBlock(chunk.input.content);
+              case reasoningToolName:
+                return `Finished reasoning about 👉 *${chunk.input.title}*`;
+            }
+          },
+          onToolError: (chunk) => {
+            if (chunk.dynamic) return null;
+            console.error(`[WORDSMITH STREAM] tool-error: ${chunk.toolName}`, chunk.error);
+            return null;
+          },
+          onToolResult: () => null,
+        },
+        hooks: {
+          onComplete: (chunks) => {
+            console.log(`[WORDSMITH COMPLETE] Sent ${chunks.length} chunks for response ID: ${responseId}`);
+            addMemoryEntry(
+              user,
+              createMemoryEntry({
+                prompt,
+                options,
+                userMessage: chunks.join(""),
+                resultClipboard: getResponseClipboard(responseId) || undefined,
+              }),
+            );
+          },
+        },
       }),
+      { userId: user },
     );
 
-    return c.json<Response>({
-      clipboard: result.resultClipboard,
-      userMessage: result.userMessage,
-      reasoning: reasoningSteps,
-      usage: data.usage,
-      totalUsage: data.totalUsage,
+    result.finishReason.then((reason) => {
+      console.log("[FINISHED]", reason);
     });
+
+    return c.json<Response>({ responseId });
   } catch (err) {
     const error = getErrorMessage(err);
     console.error("[WORDSMITH ERROR]", error);
     return c.json({ error }, 500);
   }
-};
-
-const warningResponse = (message: string): Response => {
-  console.warn("[WORDSMITH]", message);
-  return { userMessage: message };
 };
 
 type MemoryInput = {
@@ -147,6 +157,11 @@ const createMemoryEntry = (input: MemoryInput): { userMessage: string; agentMess
   const agentMessage = `${input.userMessage}${clipboardStr}`;
 
   return { userMessage, agentMessage };
+};
+
+const formatClipboardBlock = (content: string): string => {
+  const escapedContent = content.replaceAll("```", "``\\`");
+  return `📋 Clipboard\n\n\`\`\`text\n${escapedContent}\n\`\`\``;
 };
 
 function getUserPrompt(options: Option[], prompt: string): string {
@@ -205,35 +220,27 @@ CRITICAL: Your training data has a knowledge cutoff, but the current date above 
 <language>
 When communication with ${user} you always use English.
 </language>
-<progress tool="${sendMessageToolName}">
-Use the ${sendMessageToolName} tool to keep ${user} informed during task execution:
-- Acknowledge receipt: Confirm understanding of the request
-- Share progress: Update on complex or multi-step operations
-- Ask clarifying questions: When input is ambiguous or incomplete
-- Provide feedback: Note interesting findings or considerations
-
-Keep messages brief, natural, and conversational. Use this tool between other operations, not for the final result.
-</progress>
-<output tool="${sendResultToolName}">
-You MUST use the ${sendResultToolName} tool to deliver the final user message.
-1. Compose the clipboard content (if applicable, otherwise leave empty).
-2. Leave a user message for ${user}.
-  - The user message can mention the clipboard, provide a summary or translation/romanization if relevant.
+<output>
+Deliver the final user message as your normal assistant response.
+Use brief, natural English unless the user explicitly asks for another language.
 </output>
+<clipboard tool="${setClipboardToolName}">
+When composing a text snippet for the user to reuse elsewhere, call ${setClipboardToolName}.
+Put ONLY the reusable snippet in the clipboard tool. No explanations, no meta-commentary, no "Here is..." preambles.
+After setting clipboard content, mention briefly in your normal response that the clipboard text is ready.
+</clipboard>
 <reasoning tool="${reasoningToolName}">
 CRITICAL: Do NOT use the ${reasoningToolName} tool unless:
 a. You see explicit instructions in the user prompt telling you to use it, OR
 b. The task involves truly complex linguistic decisions (multiple conflicting requirements, significant ambiguity, or critical judgment calls)
 
-For standard translations, replies, and formatting tasks: proceed directly to ${sendResultToolName} without reasoning.
+For standard translations, replies, and formatting tasks: proceed directly without reasoning.
 </reasoning>
 <rules>
   - Distinguish between *user messages* (communication meant for ${user}) and *text snippets* you are preparing.
   - Always provide a *user message*.
-  - NEVER use markdown in the *user message*, as it will be shown in plain text.
-  - When composing *text snippets* for the user to use elsewhere (such as a reply, or formatted message) add them to the *clipboard*.
-  - Put ONLY the *text snippet* to the clipboard. No explanations, no meta-commentary, no "Here is..." preambles.
-  - If using the clipboard, let ${user} know.
+  - When composing *text snippets* for the user to use elsewhere (such as a reply, or formatted message), call ${setClipboardToolName}.
+  - If using the clipboard tool, let ${user} know in the response.
   - When using non-English languages, translate for ${user} (to English) and provide the full content in the *user message*.
 </rules>`;
 

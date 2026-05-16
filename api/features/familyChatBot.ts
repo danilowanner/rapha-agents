@@ -188,7 +188,7 @@ const replyToUserContent = async (ctx: Context, userContent: UserContent, memory
   try {
     const userName = getSenderName(ctx);
     const { text } = await generateText({
-      model: poe("Gemini-3-Flash"),
+      model: poe("gemini-3-flash"),
       system: await createSystemPrompt(userName),
       messages: [{ role: "user", content: userContent }],
     });
