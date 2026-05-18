@@ -12,7 +12,5 @@ export const responseClipboardHandler = (c: Context) => {
   if (!hasResponse(id)) return c.json({ error: "Response not found" }, 404);
 
   const clipboard = getResponseClipboard(id);
-  if (!clipboard) return c.body(null, 204);
-
   return c.json({ clipboard });
 };
