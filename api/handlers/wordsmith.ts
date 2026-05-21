@@ -13,7 +13,7 @@ import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
 import { isDefined } from "../../libs/utils/isDefined.ts";
 import { listCodec } from "../../libs/utils/listCodec.ts";
 import { addMemoryEntry, getMemoryAsXml } from "../features/memory.ts";
-import { addClipboard, addResponse, createResponseId, getResponseClipboard } from "./responses/state.ts";
+import { addClipboard, addResponse, createResponseId, getResponseClipboardValue } from "./responses/state.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 const poeProviderOptions = {
@@ -120,8 +120,8 @@ export const wordsmithHandler = async (c: Context) => {
               createMemoryEntry({
                 prompt,
                 options,
-                userMessage: chunks.join(""),
-                resultClipboard: getResponseClipboard(responseId) || undefined,
+                agentMessage: chunks.join(""),
+                resultClipboard: getResponseClipboardValue(responseId) || undefined,
               }),
             );
           },
@@ -145,7 +145,7 @@ export const wordsmithHandler = async (c: Context) => {
 type MemoryInput = {
   prompt: string;
   options: Option[];
-  userMessage: string;
+  agentMessage: string;
   resultClipboard?: string;
 };
 
@@ -154,7 +154,7 @@ const createMemoryEntry = (input: MemoryInput): { userMessage: string; agentMess
   const userMessage = `${input.prompt}\n\n#Options\n${optionsStr}`;
 
   const clipboardStr = input.resultClipboard ? `\n\n#Clipboard\n${input.resultClipboard}` : "";
-  const agentMessage = `${input.userMessage}${clipboardStr}`;
+  const agentMessage = `${input.agentMessage}${clipboardStr}`;
 
   return { userMessage, agentMessage };
 };

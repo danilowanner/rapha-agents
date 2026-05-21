@@ -6,13 +6,17 @@ const MAX_CACHED_RESPONSES = 20;
 
 interface ResponseEntry {
   buffer: ResponseBuffer;
-  clipboard?: string;
+  clipboard: DeferredValue<string>;
   createdAt: Date;
   userId: string;
 }
 
 type AddResponseOptions = {
   userId: string;
+};
+
+type DeferredValue<T> = PromiseWithResolvers<T> & {
+  value?: T;
 };
 
 const responses = new Map<string, ResponseEntry>();
@@ -26,7 +30,12 @@ export const createResponseId = (): string => crypto.randomUUID();
  * Adds a response stream for a pre-created ID.
  */
 export const addResponse = (id: string, stream: ReadableStream<string>, options: AddResponseOptions): void => {
-  responses.set(id, { buffer: new ResponseBuffer(stream), createdAt: new Date(), userId: options.userId });
+  responses.set(id, {
+    buffer: new ResponseBuffer(stream),
+    clipboard: createDeferredValue<string>(),
+    createdAt: new Date(),
+    userId: options.userId,
+  });
   pruneOldResponses();
 };
 
@@ -50,17 +59,34 @@ export const hasResponse = (id: string): boolean => {
 export const addClipboard = (id: string, clipboard: string): boolean => {
   const response = responses.get(id);
   if (!response) return false;
-  response.clipboard = clipboard;
+  if (response.clipboard.value !== undefined) throw new Error(`Clipboard already set for response: ${id}`);
+
+  response.clipboard.value = clipboard;
+  response.clipboard.resolve(clipboard);
   return true;
 };
 
 /**
- * Returns clipboard content for a response.
+ * Returns clipboard content when ready, or an empty string after stream completion.
  */
-export const getResponseClipboard = (id: string): string | null => {
+export const getResponseClipboard = async (id: string): Promise<string | null> => {
   const response = responses.get(id);
   if (!response) return null;
-  return response.clipboard ?? "";
+  if (response.clipboard.value !== undefined) return response.clipboard.value;
+
+  return Promise.race([
+    response.clipboard.promise,
+    response.buffer.waitUntilComplete().then(() => response.clipboard.value ?? ""),
+  ]);
+};
+
+/**
+ * Returns current clipboard content for a response without waiting.
+ */
+export const getResponseClipboardValue = (id: string): string | null => {
+  const response = responses.get(id);
+  if (!response) return null;
+  return response.clipboard.value ?? "";
 };
 
 type FileResult = {
@@ -121,6 +147,12 @@ const pruneOldResponses = (): void => {
   toRemove.forEach(([id]) => responses.delete(id));
 };
 
+const createDeferredValue = <T>(): DeferredValue<T> => {
+  return {
+    ...Promise.withResolvers<T>(),
+  };
+};
+
 class ResponseBuffer extends EventEmitter {
   private chunks: string[] = [];
   private completed = Promise.withResolvers<void>();
@@ -172,6 +204,10 @@ class ResponseBuffer extends EventEmitter {
   async getResult(): Promise<string> {
     await this.completed.promise;
     return this.chunks.join("");
+  }
+
+  async waitUntilComplete(): Promise<void> {
+    await this.completed.promise;
   }
 
   async getFileResult(): Promise<FileResult | null> {
