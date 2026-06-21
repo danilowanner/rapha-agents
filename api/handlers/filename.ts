@@ -1,11 +1,16 @@
 import { generateText, type UserContent } from "ai";
 import type { Context } from "hono";
 import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
+import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
+import { stopOnDoneOrMaxSteps } from "../../libs/ai/stopConditions.ts";
+import { submitFilename, submitFilenameToolName } from "../../libs/ai/submitFilenameTool.ts";
 import { env } from "../../libs/env.ts";
 import { fileToImageBuffers } from "../../libs/utils/fileToImageBuffers.ts";
 import { fileToText } from "../../libs/utils/fileToText.ts";
+import { isDefined } from "../../libs/utils/isDefined.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const reasoningToolName = "addAReasoningStep";
 
 /**
  * Handler for the /filename endpoint.
@@ -30,7 +35,7 @@ export async function filenameHandler(c: Context) {
           error: "Invalid request",
           details: "File is required",
         },
-        400
+        400,
       );
     }
 
@@ -50,8 +55,8 @@ export async function filenameHandler(c: Context) {
 
     content.push(...imageBuffers.map((buffer) => ({ type: "image" as const, image: buffer })));
 
-    const { text } = await generateText({
-      model: poe("claude-haiku-4.5"),
+    const { steps } = await generateText({
+      model: poe("gemini-3.1-flash-lite"),
       system: systemPrompt(userPrompt),
       messages: [
         {
@@ -59,10 +64,28 @@ export async function filenameHandler(c: Context) {
           content,
         },
       ],
+      tools: {
+        [reasoningToolName]: reasoningTool(async ({ title, details }) => {
+          console.log(`[FILENAME REASONING] ${title}\n${details}`);
+        }),
+        [submitFilenameToolName]: submitFilename(({ filename }) => {
+          console.log(`[FILENAME SUBMIT] ${filename}`);
+        }),
+      },
+      stopWhen: stopOnDoneOrMaxSteps(6),
       temperature: 0.3,
     });
 
-    const filename = text.trim();
+    const filename = [...steps]
+      .reverse()
+      .flatMap((step) => step.toolResults)
+      .map((toolResult) =>
+        toolResult.dynamic === false && toolResult.toolName === submitFilenameToolName
+          ? toolResult.output?.filename?.trim()
+          : null,
+      )
+      .filter(isDefined)[0];
+
     const fullFilename = `${filename}.${extension}`;
 
     return c.json({
@@ -75,12 +98,32 @@ export async function filenameHandler(c: Context) {
         error: "Failed to generate filename",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      500
+      500,
     );
   }
 }
 
 const today = () => new Date().toISOString().split("T")[0];
+
+const getSubmittedFilename = (
+  steps: Array<{ toolResults: Array<{ dynamic?: boolean; toolName: string; output: unknown }> }>,
+) => {
+  for (const step of [...steps].reverse()) {
+    for (const toolResult of step.toolResults) {
+      if (toolResult.dynamic || toolResult.toolName !== submitFilenameToolName) continue;
+      const { output } = toolResult;
+      if (
+        typeof output === "object" &&
+        output !== null &&
+        "done" in output &&
+        output.done === true &&
+        "filename" in output &&
+        typeof output.filename === "string"
+      )
+        return output.filename.trim();
+    }
+  }
+};
 
 const systemPrompt = (userPrompt: string | null) => `<role>
 You are a filename generator. Analyze the provided file contents and extract:
@@ -88,11 +131,17 @@ You are a filename generator. Analyze the provided file contents and extract:
 2. The relevant date if present in the content
 </role>
 
+<workflow>
+1. Use ${reasoningToolName} to analyze the document and decide on title and date
+2. Call ${submitFilenameToolName} with the final filename
+Do NOT output the filename as plain text. The filename must be submitted via ${submitFilenameToolName} only.
+</workflow>
+
 <rules>
 - Title should be concise and descriptive
 - Use sentence case for the title
 - If no date is found, use today's date: ${today()}
-- Return ONLY the filename in format: YYYY-MM-DD Title
+- Filename format: YYYY-MM-DD Title
 - Do not include the file extension
 - Keep the title under 80 characters
 - Remove special characters that are invalid in filenames (/, \\, :, *, ?, ", <, >, |)
