@@ -14,12 +14,7 @@ import { isDefined } from "../../libs/utils/isDefined.ts";
 import { listCodec } from "../../libs/utils/listCodec.ts";
 import { authMiddleware } from "../authHeaderMiddleware.ts";
 import { addMemoryEntry, getMemoryAsXml } from "../features/memory.ts";
-import {
-  addClipboard,
-  addResponse,
-  createResponseId,
-  getResponseClipboardValue,
-} from "../features/responses/state.ts";
+import { addClipboard, addResponse, createResponseId, getResponseClipboardValue } from "../features/responses/state.ts";
 
 const poe = createPoeAdapter({ apiKey: env.poeApiKey });
 const poeProviderOptions = {
@@ -115,14 +110,19 @@ export const Route = createFileRoute("/wordsmith")({
             responseId,
             createResponseStream(result.fullStream, {
               handlers: {
-                onReasoningStart: () => "🤔 Thinking...",
+                onReasoningStart: () => "🤔 Reasoning...",
+                onToolInputStart: (chunk) => {
+                  if (chunk.dynamic) return null;
+                  if (chunk.toolName === reasoningToolName) return "🤔 Thinking...";
+                  return null;
+                },
                 onToolCall: (chunk) => {
                   if (chunk.dynamic) return null;
                   switch (chunk.toolName) {
                     case setClipboardToolName:
                       return formatClipboardBlock(chunk.input.content);
                     case reasoningToolName:
-                      return `Finished reasoning about 👉 *${chunk.input.title}*`;
+                      return `✅ Finished reasoning about 👉 *${chunk.input.title}*`;
                   }
                 },
                 onToolError: (chunk) => {

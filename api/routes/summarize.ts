@@ -6,6 +6,7 @@ import { createFile, createFileToolName, getMarker } from "../../libs/ai/createF
 import { fetchWebsite } from "../../libs/ai/fetchWebsiteTool.ts";
 import { fetchYoutubeTranscript } from "../../libs/ai/fetchYoutubeTranscriptTool.ts";
 import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
+import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
 import { stopOnDoneOrMaxSteps } from "../../libs/ai/stopConditions.ts";
 import { getUserChatId } from "../../libs/context/getUserChatId.ts";
 import { env } from "../../libs/env.ts";
@@ -21,6 +22,7 @@ import { addResponse, createResponseId } from "../features/responses/state.ts";
 const MAX_PDF_PAGES = 20;
 const fetchYoutubeTranscriptToolName = "fetchYoutubeTranscript";
 const fetchWebsiteToolName = "fetchWebsite";
+const reasoningToolName = "addAReasoningStep";
 const inputSchema = z.object({
   text: z.string().optional(),
   user: z.string().min(1),
@@ -78,6 +80,9 @@ export const Route = createFileRoute("/summarize")({
             messages: [{ role: "user" as const, content: userMessageContent }],
             system: getSystemPrompt(),
             tools: {
+              [reasoningToolName]: reasoningTool(async ({ title, details }) => {
+                console.log(`[REASONING] ${title}\n${details}`);
+              }, chatId),
               [fetchYoutubeTranscriptToolName]: fetchYoutubeTranscript(async ({ url, title }) => {
                 console.log(`[FETCHED] ${url} - ${title}`);
               }),
@@ -111,9 +116,17 @@ export const Route = createFileRoute("/summarize")({
             responseId,
             createResponseStream(result.fullStream, {
               handlers: {
+                onReasoningStart: () => "🤔 Reasoning...",
+                onToolInputStart: (chunk) => {
+                  if (chunk.dynamic) return null;
+                  if (chunk.toolName === reasoningToolName) return "🤔 Thinking...";
+                  return null;
+                },
                 onToolCall: (chunk) => {
                   if (chunk.dynamic) return null;
                   switch (chunk.toolName) {
+                    case reasoningToolName:
+                      return `✅ Finished reasoning about 👉 *${chunk.input.title}*`;
                     case fetchWebsiteToolName:
                       return `🌐 Reading the website ${chunk.input.url}`;
                     case fetchYoutubeTranscriptToolName:
@@ -125,6 +138,8 @@ export const Route = createFileRoute("/summarize")({
                 onToolResult: (chunk) => {
                   if (chunk.dynamic) return null;
                   switch (chunk.toolName) {
+                    case reasoningToolName:
+                      return null;
                     case fetchWebsiteToolName:
                       const pageTitle: string = chunk.output.title ? `"${chunk.output.title}"` : "";
                       return `✅ Fetched page ${pageTitle}`;
@@ -197,8 +212,9 @@ Your task is to create clear, concise, and accurate summaries of the provided co
 
 For each request:
 1. Retrieve: If the text contains a URL, use the ${fetchWebsiteToolName} tool to retrieve the content first
-2. Summarize: Analyze, extract the key points and main ideas, create a well-structured summary that captures the essence
-3. Save: Keep the summary as a markdown file using the ${createFileToolName} tool
+2. Think: Use ${reasoningToolName} to outline approach, key claims to check, and structure
+3. Summarize: Analyze, extract the key points and main ideas, create a well-structured summary that captures the essence
+4. Save: Keep the summary as a markdown file using the ${createFileToolName} tool
 </task>
 <output-format>
 (in this exact order)
@@ -208,14 +224,18 @@ For each request:
 4) Confidence and credibility
 5) If available: Source and/or Link (optional)
 </output-format>
-<create-file-tool>
+<reasoning tool="${reasoningToolName}">
+Use ${reasoningToolName} BEFORE other tools to outline approach, flag claims needing scrutiny, and plan summary structure.
+Use again when content is ambiguous, contradictory, or credibility is unclear. NEVER duplicate prior reasoning.
+</reasoning>
+<create-file tool="${createFileToolName}">
 You MUST use the ${createFileToolName} tool to save your summary as a file.
 Immediately after writing, call ${createFileToolName} with:
   - name: A descriptive, sentence-cased filename based on the content (e.g., "Climate report summary.md")
   - description: A brief one-line description of the file contents
   - startMarker: The exact first 50-100 characters of your summary content
   - done: true (since this completes the task)
-</create-file-tool>
+</create-file>
 <summary_guidelines>
 Your summaries should:
 - Be concise but comprehensive
@@ -224,6 +244,7 @@ Your summaries should:
 - Maintain factual accuracy
 - Be structured logically (use bullet points or paragraphs as appropriate)
 - Preserve any critical details like numbers, dates, or names
+- When the source contain misspellings or incorrect terms, use your own knowledge to correct them.
 </summary_guidelines>
 <fidelity_requirements>
 When you respond:

@@ -3,6 +3,7 @@ import type { TextStreamPart, ToolSet } from "ai";
 import { getErrorMessage } from "./getErrorMessage.ts";
 
 type ToolCallChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-call" }>;
+type ToolInputStartChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-input-start" }>;
 type ToolResultChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-result" }>;
 type ToolErrorChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "tool-error" }>;
 type ReasoningStartChunk<TOOLS extends ToolSet> = Extract<TextStreamPart<TOOLS>, { type: "reasoning-start" }>;
@@ -16,6 +17,7 @@ const isMarkerResult = (result: HandlerResult): result is MarkerResult =>
 
 type StreamHandlers<TOOLS extends ToolSet> = {
   onReasoningStart?: (chunk: ReasoningStartChunk<TOOLS>) => HandlerResult;
+  onToolInputStart?: (chunk: ToolInputStartChunk<TOOLS>) => HandlerResult;
   onToolCall?: (chunk: ToolCallChunk<TOOLS>) => HandlerResult;
   onToolResult?: (chunk: ToolResultChunk<TOOLS>) => HandlerResult;
   onToolError?: (chunk: ToolErrorChunk<TOOLS>) => HandlerResult;
@@ -58,6 +60,12 @@ export const createResponseStream = <TOOLS extends ToolSet>(
           switch (chunk.type) {
             case "reasoning-start": {
               const result = handlers.onReasoningStart?.(chunk);
+              enqueueHandlerResult(result ?? null);
+              break;
+            }
+            
+            case "tool-input-start": {
+              const result = handlers.onToolInputStart?.(chunk);
               enqueueHandlerResult(result ?? null);
               break;
             }

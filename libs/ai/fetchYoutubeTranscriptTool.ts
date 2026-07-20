@@ -4,13 +4,17 @@ import z from "zod";
 import { fetchYoutubeTranscript as fetchViaOxylabs } from "../oxylabs/youtubeTranscript.ts";
 
 const youtubeTranscript = z.object({
-  url: z.url().describe("The URL of the YouTube video to fetch transcript from"),
+  url: z.url().describe("The URL of the YouTube video to fetch transcript from."),
 });
 
 const youtubeTranscriptOutput = z.object({
   title: z.string().optional().describe("The title of the YouTube video"),
   uploader: z.string().optional().describe("The uploader of the YouTube video"),
-  transcript: z.string().describe("The full transcript text of the video"),
+  transcript: z
+    .string()
+    .describe(
+      "The full transcript text of the video. This may be automatically generated and certain technical terms or names may be incorrect. Infer the correct terms and names and use them instead. Prefer the title spelling since it is not auto-transcribed.",
+    ),
 });
 
 export type YoutubeTranscript = z.infer<typeof youtubeTranscript>;
