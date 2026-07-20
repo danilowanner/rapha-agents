@@ -6,6 +6,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import type { ReactNode } from "react";
 
 import appCss from "../ui/global.css?url";
+import { mantineCssVariablesResolver } from "../ui/mantineCssVariables.ts";
 
 const queryClient = new QueryClient();
 
@@ -25,7 +26,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <MantineProvider>
+      <MantineProvider cssVariablesResolver={mantineCssVariablesResolver}>
         <QueryClientProvider client={queryClient}>
           <Outlet />
         </QueryClientProvider>
