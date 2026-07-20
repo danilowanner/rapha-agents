@@ -3,6 +3,7 @@ node_modules
 .env
 .git
 .cache
+dist
 *.md
 test
 README.md

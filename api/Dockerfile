@@ -11,7 +11,7 @@ COPY api ./api
 COPY libs ./libs
 
 RUN npx prisma generate
-RUN npm run build-api-client
+RUN npm run build-api
 
 FROM node:24-bookworm-slim
 
@@ -31,12 +31,11 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY prisma ./prisma
-COPY prisma.config.ts tsconfig.json ./
-COPY --from=builder /app/api ./api
-COPY --from=builder /app/generated ./generated
-COPY libs ./libs
+COPY prisma.config.ts ./
+COPY --from=builder /app/api/server.mjs ./api/server.mjs
+COPY --from=builder /app/dist ./dist
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-CMD ["npm", "run", "start-api"]
+CMD ["node", "api/server.mjs"]

@@ -1,4 +1,4 @@
-import { getRecentResponses } from "../../handlers/responses/state.ts";
+import { getRecentResponses } from "../responses/state.ts";
 import { getMemoryAsXml } from "../memory.ts";
 import type { AppDataFunctions } from "./contract.ts";
 

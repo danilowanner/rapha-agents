@@ -1,14 +1,15 @@
-import type { Context, Next } from "hono";
+import { createMiddleware } from "@tanstack/react-start";
 
 import { env } from "../libs/env.ts";
 import { isValidAccessToken } from "./features/accessTokens.ts";
 
-export const authHeaderMiddleware = async (c: Context, next: Next) => {
-  const bearerToken = c.req.header("Authorization")?.replace("Bearer ", "");
+/** Requires either the configured API key or a valid temporary access token. */
+export const authMiddleware = createMiddleware().server(({ request, next }) => {
+  const bearerToken = request.headers.get("Authorization")?.replace("Bearer ", "");
   if (bearerToken === env.apiKey) return next();
 
-  const accessToken = c.req.query("token");
+  const accessToken = new URL(request.url).searchParams.get("token");
   if (accessToken && isValidAccessToken(accessToken)) return next();
 
-  return c.json({ error: "Unauthorized" }, 401);
-};
+  return Response.json({ error: "Unauthorized" }, { status: 401 });
+});

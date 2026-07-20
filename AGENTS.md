@@ -7,7 +7,7 @@ Monorepo for LLM-powered agents and API services. Deployed on Dokploy with indep
 
 Key packages within the project:
 
-- api/ : Hono API server (api.raphastudio.com) with endpoints, schedulers, and response streaming. Dockerfile at `api/Dockerfile`.
+- api/ : TanStack Start application (api.raphastudio.com) with SSR, server routes, schedulers, and response streaming. Dockerfile at `api/Dockerfile`.
 - carousell/ : Agent that autonomously gathers data and fills forms in logged-in Chrome using Browser MCP.
 - owui/ : Open WebUI deployment config (docker-compose).
 - libs/ : Shared libraries and utilities used across different packages.
@@ -16,7 +16,7 @@ Key packages within the project:
 
 - React
 - Typescript
-- Hono
+- TanStack Start
 - Vercel AI SDK
 - Model Context Protocol (MCP)
 - Open Web UI (OWUI)
@@ -25,39 +25,34 @@ Key packages within the project:
 
 #### api/
 
-Hono-based API server with scheduled tasks:
+TanStack Start application with SSR UI, HTTP server routes, schedulers, and Telegram bots. `api/` itself is the Start source directory; there is no nested `src/` layer.
 
-- **index.ts**: Main server setup with Hono, endpoints, and task registration
-- **authHeaderMiddleware.ts**: Authentication middleware
-- **handlers/bus.ts**: Bus endpoint handler
-- **handlers/chat.ts**: OpenAI-compatible chat completions endpoint
-- **handlers/filename.ts**: Filename generation endpoint
-- **handlers/memory.ts**: Memory read/write endpoints
-- **handlers/summarize.ts**: Summarization endpoint
-- **handlers/tools.ts**: Tool OpenAPI and execution endpoints
-- **handlers/wordsmith.ts**: Wordsmith (writing) endpoint
-- **handlers/transportDepartmentCheckHandler.ts**: Scheduled task for checking transport department appointments
-- **features/scheduler.ts**: Task scheduler (registerTask, startScheduler, stopScheduler)
-- **features/memory.ts**: Memory feature used by wordsmith and memory endpoints
+- **routes/**: File-based UI and HTTP routes. Endpoint implementations live directly in route files and use native `Request`, `Response`, and Web Streams.
+- **routeTree.gen.ts**: Generated TanStack Router tree. Keep it committed and regenerate through Vite after route changes.
+- **router.tsx**: Per-request router factory.
+- **authHeaderMiddleware.ts**: Shared Start server middleware for token authentication.
+- **http.ts**: Native stream encoding and CORS helpers.
+- **features/**: Reusable domain logic only; routes own request/response translation.
+- **features/appData/**: Typed dashboard function contract and server registry used by `/app-data`.
+- **features/responses/state.ts**: Buffered response stream state with replay, result retrieval, and deletion.
+- **features/responses/sendTelegramResponseFile.ts**: Sends completed response files through Telegram.
+- **features/scheduler.ts**: Background task registration and lifecycle.
+- **process.ts**: Starts and stops scheduler and Telegram bots once per Node process.
+- **server.ts**: TanStack Start server entry and process boot.
+- **server.mjs**: Production `srvx` adapter, static asset serving, and graceful shutdown.
+- **vite.config.ts**: Builds Start client/server output into root `dist/`.
+- **ui/MarkdownViewer.tsx**: Streaming markdown renderer; component stylesheet is colocated in `ui/MarkdownViewer.css`.
+- **ui/global.css**: Global styles loaded by the root route.
 
-**Response streaming (handlers/responses/):**
+Key route groups:
 
-- **state.ts**: ResponseBuffer class using EventEmitter for buffered stream replay. Exports addResponse, getResponseStream, getResponseResult, hasResponse, deleteResponse
-- **md.ts**: Streams markdown chunks as plain text for client consumption
-- **result.ts**: Returns complete result after stream finishes
-- **view.tsx**: Response view renderer with SSR
+- **routes/app.tsx** and **routes/app-data.ts**: Authenticated dashboard and typed data endpoint.
+- **routes/docs/**: Published markdown document UI and APIs.
+- **routes/responses/**: Streaming markdown, result, clipboard, and viewer endpoints.
+- **routes/tools/**: Tool OpenAPI schema and execution endpoints with CORS.
+- **routes/wordsmith.ts**, **summarize.ts**, **filename.ts**, _*memory*.ts_*, **bus.ts**, **auth.ts**: Agent-facing APIs.
 
-**UI components (ui/):**
-
-- **Document.tsx**: HTML document wrapper for SSR
-- **MarkdownStream.tsx**: React component that fetches and renders streaming markdown using markdown-it
-- **DocumentContainer.tsx**: Container component with root element ID and data-document payload
-
-**Client (client/):**
-
-- **main.tsx**: Client-side React hydration entry point
-- **main.css**: Client styles
-- **vite.config.ts**: Vite bundler config
+API commands run from repository root: `npm run start-api-dev`, `npm run build-api`, `npm run start-api`, and `npm run tsc`. Production image builds with `api/Dockerfile`; Prisma CLI remains a runtime dependency so container migrations can run before server start.
 
 #### carousell/
 

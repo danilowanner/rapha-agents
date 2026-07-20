@@ -13,16 +13,6 @@
       "detail": "Run API in development mode (watch mode)"
     },
     {
-      "type": "shell",
-      "command": "npm run build-api-client -- -w",
-      "icon": {
-        "color": "terminal.ansiCyan",
-        "id": "combine"
-      },
-      "label": "Run build-api-client (watch mode)",
-      "detail": "Run API client build in watch mode"
-    },
-    {
       "type": "npm",
       "script": "tsc",
       "problemMatcher": [],

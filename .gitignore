@@ -1,6 +1,7 @@
 node_modules
 .env*
 build
+/dist
 .cache
 owui/uploads.tar.gz
 owui/verctor_db.tar.gz

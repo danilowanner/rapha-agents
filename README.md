@@ -1,6 +1,6 @@
 # Rapha AI Agents
 
-Monorepo for LLM-powered agents and API services built with TypeScript, Hono, and Vercel AI SDK.
+Monorepo for LLM-powered agents and API services built with TypeScript, TanStack Start, and Vercel AI SDK.
 
 ## Structure
 
@@ -8,10 +8,13 @@ Monorepo for LLM-powered agents and API services built with TypeScript, Hono, an
 /
 ├── api/
 │   ├── Dockerfile           # API Docker image
-│   ├── index.ts             # Server entry point
-│   ├── handlers/            # Route handlers (bus, chat, summarize, wordsmith, responses/*)
-│   ├── features/            # Shared API features (scheduler, memory)
-│   └── ...                  # UI, db, tests
+│   ├── routes/              # UI and HTTP server routes
+│   ├── server.ts            # TanStack Start server entry
+│   ├── server.mjs           # Production Node server
+│   ├── process.ts           # Background service lifecycle
+│   ├── features/            # Reusable domain logic
+│   ├── ui/                  # Shared UI and styles
+│   └── ...                  # Database modules and tests
 ├── carousell/               # Carousell automation agent (Browser MCP)
 ├── owui/
 │   └── docker-compose.yml   # Open WebUI deployment
