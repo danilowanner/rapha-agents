@@ -1,10 +1,10 @@
 import { extractJsonMiddleware, generateText, Output, wrapLanguageModel } from "ai";
 import z from "zod";
 
-import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
+import { createPoeChat } from "../../libs/ai/providers/poe-chat.ts";
 import { env } from "../../libs/env.ts";
 
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const poe = createPoeChat({ apiKey: env.poeApiKey });
 
 const model = wrapLanguageModel({
   model: poe("claude-haiku-4.5"),

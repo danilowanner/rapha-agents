@@ -5,7 +5,7 @@ import z from "zod";
 import { createFile, createFileToolName, getMarker } from "../../libs/ai/createFileTool.ts";
 import { fetchWebsite } from "../../libs/ai/fetchWebsiteTool.ts";
 import { fetchYoutubeTranscript } from "../../libs/ai/fetchYoutubeTranscriptTool.ts";
-import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
+import { createPoeChat } from "../../libs/ai/providers/poe-chat.ts";
 import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
 import { stopOnDoneOrMaxSteps } from "../../libs/ai/stopConditions.ts";
 import { getUserChatId } from "../../libs/context/getUserChatId.ts";
@@ -27,7 +27,7 @@ const inputSchema = z.object({
   text: z.string().optional(),
   user: z.string().min(1),
 });
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const poe = createPoeChat({ apiKey: env.poeApiKey });
 
 type Response = {
   responseId?: string;

@@ -2,11 +2,11 @@ import { generateText, zodSchema } from "ai";
 import z from "zod";
 import { env } from "../../env.ts";
 import { getErrorMessage } from "../../utils/getErrorMessage.ts";
-import { createPoeAdapter } from "../providers/poe-provider.ts";
+import { createPoeChat } from "../providers/poe-chat.ts";
 
 const TRUNCATE_LENGTH = 3000;
 
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const poe = createPoeChat({ apiKey: env.poeApiKey });
 
 const fileMetadataSchema = z.object({
   name: z.string().describe("Filename with extension, Sentence cased (e.g. 'Climate report summary.md')"),

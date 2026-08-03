@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { stepCountIs, streamText } from "ai";
 import z from "zod";
 
-import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
+import { createPoeChat } from "../../libs/ai/providers/poe-chat.ts";
 import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
 import { setClipboard, setClipboardToolName } from "../../libs/ai/setClipboardTool.ts";
 import { getUserChatId } from "../../libs/context/getUserChatId.ts";
@@ -16,12 +16,7 @@ import { authMiddleware } from "../authHeaderMiddleware.ts";
 import { addMemoryEntry, getMemoryAsXml } from "../features/memory.ts";
 import { addClipboard, addResponse, createResponseId, getResponseClipboardValue } from "../features/responses/state.ts";
 
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
-const poeProviderOptions = {
-  poe: {
-    reasoningBudgetTokens: 1024,
-  },
-} as const;
+const poe = createPoeChat({ apiKey: env.poeApiKey });
 const allOptions = ["Translate", "Screen", "Translate Screen", "Reply", "Format for Whatsapp", "Think First"] as const;
 const optionSchema = z.enum(allOptions);
 const inputSchema = z.object({
@@ -103,7 +98,6 @@ export const Route = createFileRoute("/wordsmith")({
               }, chatId),
             },
             stopWhen: stepCountIs(6),
-            providerOptions: poeProviderOptions,
           });
 
           addResponse(

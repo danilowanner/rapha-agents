@@ -1,6 +1,7 @@
 import { generateText, stepCountIs, type Tool } from "ai";
 
-import { createPoeAdapter, type PoeModelId } from "../libs/ai/providers/poe-provider.ts";
+import { createPoeChat } from "../libs/ai/providers/poe-chat.ts";
+import type { PoeModelId } from "../libs/ai/providers/poe-models.ts";
 import { env } from "../libs/env.ts";
 import { db } from "./db.ts";
 import { logger } from "./log.ts";
@@ -14,7 +15,7 @@ import { notify } from "./utils/notify.ts";
 
 const log = logger("AGENT");
 
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const poe = createPoeChat({ apiKey: env.poeApiKey });
 
 export const agent = {
   handleDanilosMessage,

@@ -1,12 +1,12 @@
 import { generateText, type UserContent } from "ai";
 import { Bot, type Context } from "grammy";
 
-import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
+import { createPoeChat } from "../../libs/ai/providers/poe-chat.ts";
 import { env } from "../../libs/env.ts";
 import { markdownToTelegramHtml } from "../../libs/utils/markdownToTelegramHtml.ts";
 import { addMemoryEntry, getMemoryAsXml } from "./memory.ts";
 
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const poe = createPoeChat({ apiKey: env.poeApiKey });
 const allowedChatIds = new Set(env.telegramFamilyBotAllowedChatIds);
 let botUsernamePromise: Promise<string | undefined> | null = null;
 let familyTelegramBot: Bot | null = null;

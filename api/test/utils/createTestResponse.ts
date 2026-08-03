@@ -1,10 +1,10 @@
 import { streamText, type UserContent } from "ai";
 
-import { createPoeAdapter } from "../../../libs/ai/providers/poe-provider.ts";
+import { createPoeChat } from "../../../libs/ai/providers/poe-chat.ts";
 import { env } from "../../../libs/env.ts";
 import { createResponseStream } from "../../../libs/utils/createResponseStream.ts";
 
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const poe = createPoeChat({ apiKey: env.poeApiKey });
 
 const content: UserContent = [
   {

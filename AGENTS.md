@@ -102,7 +102,9 @@ Core AI tooling that wraps the Vercel AI SDK's `tool()` function for agent capab
 - **reasoningTool.ts**: Tool for structured reasoning steps
 - **sendMessageTool.ts**: Tool for sending messages to users via Telegram
 - **sendResultTool.ts**: Tool for sending results with optional clipboard content via Telegram
-- **providers/poe-provider.ts**: Custom Poe AI provider adapter
+- **providers/poe-chat.ts**: Poe OpenAI Chat Completions adapter (`/v1/chat/completions`)
+- **providers/poe-messages.ts**: Poe Anthropic Messages adapter (`/v1/messages`)
+- **providers/poe-models.ts**: Shared Poe model IDs and options
 - **functions/extractFile.ts**: AI-based file metadata extraction using structured output
 
 #### libs/context
@@ -146,34 +148,35 @@ Terminal UI components using Ink (React for CLI):
 
 #### Poe provider usage
 
-The Poe provider wraps various AI models. Usage pattern:
+Two adapters over Poe's OpenAI-compatible API. Prefer **chat** for multi-provider tool loops; use **messages** for Claude-specific features (thinking, prompt cache).
 
 ```typescript
 import { generateText, Output } from "ai";
-import { createPoeAdapter } from "../providers/poe-provider.ts";
+import { createPoeChat } from "../providers/poe-chat.ts";
+import { createPoeMessages } from "../providers/poe-messages.ts";
 import { env } from "../../env.ts";
 
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const poe = createPoeChat({ apiKey: env.poeApiKey });
+const poeMessages = createPoeMessages({ apiKey: env.poeApiKey });
 
-// Plain text
+// Plain text / tools (chat completions)
 const { text } = await generateText({
-  model: poe("Claude-Haiku-4.5"),
+  model: poe("claude-haiku-4.5"),
   system: "...",
   messages: [{ role: "user", content: "..." }],
 });
 
 // Structured output (use generateText + Output.object, not deprecated generateObject)
 const { output } = await generateText({
-  model: poe("Gemini-3-Flash"),
+  model: poe("gemini-3-flash"),
   output: Output.object({ schema: zodSchema }),
   prompt: "...",
 });
 ```
 
-**Available models** (use exact string values):
+**Available models** (use exact string values from `PoeModelId` in `poe-models.ts`):
 
-- `"Claude-Sonnet-4.6"`, `"Claude-Haiku-4.5"`
-- Full list in types of createPoeAdapter
+- `"claude-sonnet-4.6"`, `"claude-haiku-4.5"`, `"gemini-3.1-flash-lite"`, `"gpt-5.4-nano"`, …
 
 ## Deployment
 

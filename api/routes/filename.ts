@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { generateText, type UserContent } from "ai";
 
-import { createPoeAdapter } from "../../libs/ai/providers/poe-provider.ts";
+import { createPoeChat } from "../../libs/ai/providers/poe-chat.ts";
 import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
 import { stopOnDoneOrMaxSteps } from "../../libs/ai/stopConditions.ts";
 import { submitFilename, submitFilenameToolName } from "../../libs/ai/submitFilenameTool.ts";
@@ -11,7 +11,7 @@ import { fileToText } from "../../libs/utils/fileToText.ts";
 import { isDefined } from "../../libs/utils/isDefined.ts";
 import { authMiddleware } from "../authHeaderMiddleware.ts";
 
-const poe = createPoeAdapter({ apiKey: env.poeApiKey });
+const poe = createPoeChat({ apiKey: env.poeApiKey });
 const reasoningToolName = "addAReasoningStep";
 
 export const Route = createFileRoute("/filename")({
@@ -72,7 +72,6 @@ export const Route = createFileRoute("/filename")({
               }),
             },
             stopWhen: stopOnDoneOrMaxSteps(6),
-            temperature: 0.3,
           });
 
           const filename = [...steps]
