@@ -55,7 +55,7 @@ export const Route = createFileRoute("/filename")({
           content.push(...imageBuffers.map((buffer) => ({ type: "image" as const, image: buffer })));
 
           const { steps } = await generateText({
-            model: poe("gemini-3.1-flash-lite"),
+            model: poe("gpt-5.4-mini"),
             system: systemPrompt(userPrompt),
             messages: [
               {
@@ -128,7 +128,7 @@ Do NOT output the filename as plain text. The filename must be submitted via ${s
 
 <examples>
 - "2024-08-15 Tax assessment final 23-24 and provisional 24-25"
-- "2025-08-26 Apple iCloud+ 2TB invoice"
+- "2025-08-26 Apple iCloud+ 2TB invoice USD 19.99"
 </examples>
 
 ${userPrompt ? `<naming_instructions>\n${userPrompt}\n</naming_instructions>\n\n` : ""}
