@@ -19,9 +19,20 @@ export function createPoeChat(options: PoeOptions): PoeChat {
     name: "poe",
     baseURL: POE_BASE_URL,
     apiKey: options.apiKey,
+    transformRequestBody: (args) => ({
+      ...args,
+      extra_body: {
+        ...(isRecord(args.extra_body) ? args.extra_body : {}),
+        web_search: false,
+      },
+    }),
   });
 
   const poe: PoeChat = (modelId) => provider.chatModel(modelId);
   providerCache.set(options.apiKey, poe);
   return poe;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
