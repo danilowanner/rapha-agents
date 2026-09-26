@@ -5,6 +5,7 @@ import z from "zod";
 import { createPoeChat } from "../../libs/ai/providers/poe-chat.ts";
 import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
 import { setClipboard, setClipboardToolName } from "../../libs/ai/setClipboardTool.ts";
+import { getUserChatId } from "../../libs/context/getUserChatId.ts";
 import { env } from "../../libs/env.ts";
 import { createResponseStream } from "../../libs/utils/createResponseStream.ts";
 import { formatDateTime } from "../../libs/utils/formatDateTime.ts";
@@ -13,6 +14,7 @@ import { isDefined } from "../../libs/utils/isDefined.ts";
 import { listCodec } from "../../libs/utils/listCodec.ts";
 import { authMiddleware } from "../authHeaderMiddleware.ts";
 import { addMemoryEntry, getMemoryAsXml } from "../features/memory.ts";
+import { sendTelegramResponseLink } from "../features/responses/sendTelegramResponseLink.ts";
 import { addClipboard, addResponse, createResponseId, getResponseClipboardValue } from "../features/responses/state.ts";
 
 const poe = createPoeChat({ apiKey: env.poeApiKey });
@@ -69,6 +71,7 @@ export const Route = createFileRoute("/wordsmith")({
           }
 
           const { prompt, user, options } = inputParsed.data;
+          const chatId = getUserChatId(user);
 
           const imageFile = formData.get("image") as File | null;
           const imageBuffer: Buffer | undefined = imageFile ? Buffer.from(await imageFile.arrayBuffer()) : undefined;
@@ -141,6 +144,7 @@ export const Route = createFileRoute("/wordsmith")({
             }),
             { userId: user },
           );
+          if (chatId) sendTelegramResponseLink(chatId, responseId);
 
           result.finishReason.then((reason) => {
             console.log("[FINISHED]", reason);

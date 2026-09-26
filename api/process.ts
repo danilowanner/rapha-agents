@@ -1,6 +1,7 @@
 import { env } from "../libs/env.ts";
 import { telegramBot } from "../libs/utils/telegram.ts";
 import { startFamilyChatBot, stopFamilyChatBot } from "./features/familyChatBot.ts";
+import { stopTelegramResponseLinks } from "./features/responses/sendTelegramResponseLink.ts";
 import { startScheduler, stopScheduler } from "./features/scheduler.ts";
 
 let started = false;
@@ -24,6 +25,7 @@ export function stopApiProcess(): Promise<void> {
 
 async function stopServices(): Promise<void> {
   stopScheduler();
+  await stopTelegramResponseLinks();
   await Promise.all([
     stopFamilyChatBot().then(() => console.log("Family Telegram bot stopped")),
     telegramBot.stop().then(() => console.log("Telegram bot stopped")),

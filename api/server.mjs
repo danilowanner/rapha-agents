@@ -24,12 +24,13 @@ const shutdown = async (signal) => {
   try {
     await stopServerProcess();
     await server.close();
+    process.exit(0);
   } catch (error) {
     console.error("Graceful shutdown failed:", error);
     await server.close(true);
-    process.exitCode = 1;
+    process.exit(1);
   }
 };
 
-process.once("SIGTERM", () => void shutdown("SIGTERM"));
-process.once("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));

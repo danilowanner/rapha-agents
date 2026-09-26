@@ -19,7 +19,10 @@ type DeferredValue<T> = PromiseWithResolvers<T> & {
   value?: T;
 };
 
+type ResponseRemovedListener = (id: string) => void;
+
 const responses = new Map<string, ResponseEntry>();
+const responseRemovedListeners = new Set<ResponseRemovedListener>();
 
 /**
  * Creates a unique response ID before the response stream exists.
@@ -132,10 +135,18 @@ export const getRecentResponses = (options: RecentResponsesOptions = {}) => {
 };
 
 /**
+ * Registers a listener invoked when a response leaves the in-memory cache.
+ */
+export const onResponseRemoved = (listener: ResponseRemovedListener): void => {
+  responseRemovedListeners.add(listener);
+};
+
+/**
  * Removes a response by ID.
  */
 export const deleteResponse = (id: string): void => {
-  responses.delete(id);
+  if (!responses.delete(id)) return;
+  responseRemovedListeners.forEach((listener) => listener(id));
 };
 
 const pruneOldResponses = (): void => {
@@ -144,7 +155,7 @@ const pruneOldResponses = (): void => {
   const entries = [...responses.entries()].sort(([, a], [, b]) => a.createdAt.getTime() - b.createdAt.getTime());
 
   const toRemove = entries.slice(0, responses.size - MAX_CACHED_RESPONSES);
-  toRemove.forEach(([id]) => responses.delete(id));
+  toRemove.forEach(([id]) => deleteResponse(id));
 };
 
 const createDeferredValue = <T>(): DeferredValue<T> => {

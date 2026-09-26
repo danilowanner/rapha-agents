@@ -17,6 +17,7 @@ import { formatDateTime } from "../../libs/utils/formatDateTime.ts";
 import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
 import { authMiddleware } from "../authHeaderMiddleware.ts";
 import { sendTelegramResponseFile } from "../features/responses/sendTelegramResponseFile.ts";
+import { sendTelegramResponseLink } from "../features/responses/sendTelegramResponseLink.ts";
 import { addResponse, createResponseId } from "../features/responses/state.ts";
 
 const MAX_PDF_PAGES = 20;
@@ -161,6 +162,7 @@ export const Route = createFileRoute("/summarize")({
             { userId: user },
           );
           console.log(`[RESPONSE CREATED] ID: ${responseId}`);
+          if (chatId) sendTelegramResponseLink(chatId, responseId);
 
           return globalThis.Response.json({ responseId } satisfies Response);
         } catch (err) {

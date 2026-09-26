@@ -48,7 +48,7 @@ ${truncated}
 JSON:`,
     });
 
-    console.log("Extracted file metadata response:", text);
+    console.log("[EXTRACT FILE FALLBACK] file metadata response:", text);
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON object found in AI response");
 

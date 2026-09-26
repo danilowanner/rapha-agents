@@ -1,6 +1,5 @@
 import { InputFile } from "grammy";
 
-import { env } from "../../../libs/env.ts";
 import { getErrorMessage } from "../../../libs/utils/getErrorMessage.ts";
 import { markdownToTelegramHtml } from "../../../libs/utils/markdownToTelegramHtml.ts";
 import { shorten } from "../../../libs/utils/shorten.ts";
@@ -17,9 +16,6 @@ export async function sendTelegramResponseFile(chatId: number | string, response
   console.log("[RESPONSES/TELEGRAM]", responseId, fileName);
 
   try {
-    await telegramBot.api.sendMessage(chatId, markdownToTelegramHtml(`${env.baseUrl}/responses/view/${responseId}`), {
-      parse_mode: "HTML",
-    });
     await telegramBot.api.sendDocument(chatId, new InputFile(Buffer.from(content, "utf-8"), fileName), {
       caption: markdownToTelegramHtml(caption),
       parse_mode: "HTML",

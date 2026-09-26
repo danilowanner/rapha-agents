@@ -20,7 +20,7 @@ const createFileInput = z.object({
   done: z
     .boolean()
     .describe(
-      "Set to true if this is the final output and the task is complete. Set to false if you need to continue with the task."
+      "Set to true if this is the final output and the task is complete. Set to false if you need to continue with the task.",
     ),
 });
 
