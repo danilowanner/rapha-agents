@@ -5,7 +5,6 @@ import z from "zod";
 import { createPoeChat } from "../../libs/ai/providers/poe-chat.ts";
 import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
 import { setClipboard, setClipboardToolName } from "../../libs/ai/setClipboardTool.ts";
-import { getUserChatId } from "../../libs/context/getUserChatId.ts";
 import { env } from "../../libs/env.ts";
 import { createResponseStream } from "../../libs/utils/createResponseStream.ts";
 import { formatDateTime } from "../../libs/utils/formatDateTime.ts";
@@ -70,7 +69,6 @@ export const Route = createFileRoute("/wordsmith")({
           }
 
           const { prompt, user, options } = inputParsed.data;
-          const chatId = getUserChatId(user);
 
           const imageFile = formData.get("image") as File | null;
           const imageBuffer: Buffer | undefined = imageFile ? Buffer.from(await imageFile.arrayBuffer()) : undefined;
@@ -95,7 +93,7 @@ export const Route = createFileRoute("/wordsmith")({
               }),
               [reasoningToolName]: reasoningTool(async ({ title, details }) => {
                 console.log(`[REASONING] ${title}\n${details}`);
-              }, chatId),
+              }),
             },
             stopWhen: stepCountIs(6),
           });

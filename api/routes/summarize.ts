@@ -82,7 +82,7 @@ export const Route = createFileRoute("/summarize")({
             tools: {
               [reasoningToolName]: reasoningTool(async ({ title, details }) => {
                 console.log(`[REASONING] ${title}\n${details}`);
-              }, chatId),
+              }),
               [fetchYoutubeTranscriptToolName]: fetchYoutubeTranscript(async ({ url, title }) => {
                 console.log(`[FETCHED] ${url} - ${title}`);
               }),
