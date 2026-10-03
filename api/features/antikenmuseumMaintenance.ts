@@ -58,7 +58,7 @@ const sshCommands = {
   oom: "journalctl -k -n 50 --no-pager",
   cert: "certbot certificates",
   logs_apache: "tail -n 80 /var/log/apache2/error.log",
-  logs_flow: "tail -n 80 /var/www/builds/live/Data/Logs/System_Production.log",
+  logs_flow: "tail -n 80 /var/www/builds/live/Data/Logs/System.log",
   logs_mysql: "tail -n 80 /var/log/mysql/error.log",
 } as const satisfies Record<SshCheck, string>;
 
@@ -72,7 +72,7 @@ const antikenmuseumMaintenanceDescription = [
   "http: fetch https://www.antikenmuseumbasel.ch. Returns status and elapsed milliseconds.",
   "cert: certbot certificates. Exit 0 does not mean the certificate is valid.",
   "logs_apache: last 80 lines of the Apache error log.",
-  "logs_flow: last 80 lines of the live Flow production log.",
+  "logs_flow: last 80 lines of the live Flow System.log.",
   "logs_mysql: last 80 lines of the MySQL error log.",
 ].join("\n");
 
