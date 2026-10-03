@@ -7,13 +7,13 @@ import { fetchYoutubeTranscript } from "../../libs/ai/fetchYoutubeTranscriptTool
 import { webResearch } from "../../libs/ai/webResearchTool.ts";
 import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
 
-const tools = {
+export const agentTools = {
   "Fetch-Website": fetchWebsite(null),
   "Fetch-Youtube-Transcript": fetchYoutubeTranscript(null),
   "Web-Research": webResearch(null),
 };
 
-type AnyTool = Omit<Tool, "inputSchema" | "outputSchema"> & { inputSchema: ZodType; outputSchema: ZodType };
+export type AnyTool = Omit<Tool, "inputSchema" | "outputSchema"> & { inputSchema: ZodType; outputSchema: ZodType };
 
 export type ToolExecutionResult =
   | { type: "success"; name: string; value: unknown }
@@ -62,17 +62,19 @@ export function getToolsOpenApiDocument() {
  * Executes a tool by its lowercase route name.
  */
 export async function executeTool(toolRouteName: string, rawParams: unknown): Promise<ToolExecutionResult> {
-  const entry = Object.entries(tools).find(([name]) => name.toLocaleLowerCase() === toolRouteName.toLocaleLowerCase());
+  const entry = Object.entries(agentTools).find(
+    ([name]) => name.toLocaleLowerCase() === toolRouteName.toLocaleLowerCase(),
+  );
   if (!entry) return { type: "not-found" };
 
   const [name, rawTool] = entry;
   const tool = rawTool as AnyTool;
 
+  if (!tool.execute) return { type: "missing-execute" };
+
   try {
     console.log("[OPENAPI TOOL] request", name, JSON.stringify(rawParams));
-    const params = tool.inputSchema.parse(rawParams);
-    if (!tool.execute) return { type: "missing-execute" };
-    const value = await tool.execute(params, { messages: [], toolCallId: "" });
+    const value = await executeAgentTool(tool, rawParams);
     return { type: "success", name, value };
   } catch (error) {
     console.error("[OPENAPI TOOL]", name, error);
@@ -80,6 +82,15 @@ export async function executeTool(toolRouteName: string, rawParams: unknown): Pr
   }
 }
 
+/**
+ * Runs one agent tool. OpenAPI and MCP both call this.
+ */
+export async function executeAgentTool(tool: AnyTool, rawParams: unknown): Promise<unknown> {
+  const params = tool.inputSchema.parse(rawParams);
+  if (!tool.execute) throw new Error("Tool missing execution function.");
+  return tool.execute(params, { messages: [], toolCallId: "" });
+}
+
 const forEachTool = (fn: (name: string, tool: AnyTool) => void): void => {
-  Object.entries(tools).forEach(([name, tool]) => fn(name, tool as AnyTool));
+  Object.entries(agentTools).forEach(([name, tool]) => fn(name, tool as AnyTool));
 };

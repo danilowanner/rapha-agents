@@ -31,6 +31,14 @@ npm install
 npm run start-api-dev      # API server (watch mode)
 ```
 
+## MCP
+
+Grok Bot: Streamable HTTP `https://api.raphastudio.com/mcp`. Header `Authorization: Bearer <API_KEY>`. Stateless JSON.
+
+Tools call the same functions as the OpenAPI tool server. MCP names: `web_research`, `fetch_youtube_transcript`. `Fetch-Website` stays on OpenAPI only. Grok already fetches pages.
+
+OWUI stays on `GET /tools/openapi.json` and `POST /tools/$name`. Do not add MCP-only tools (IBKR) to that OpenAPI registry.
+
 ## Prisma
 
 Schema: `prisma/schema.prisma`. Config: `prisma.config.ts` (uses `DATABASE_URL`).

@@ -48,7 +48,8 @@ Key route groups:
 - **routes/app.tsx** and **routes/app-data.ts**: Authenticated dashboard and typed data endpoint.
 - **routes/docs/**: Published markdown document UI and APIs.
 - **routes/responses/**: Streaming markdown, result, clipboard, and viewer endpoints.
-- **routes/tools/**: Tool OpenAPI schema and execution endpoints with CORS.
+- **routes/tools/**: Tool OpenAPI schema and execution endpoints with CORS. OWUI tool server. Do not add MCP-only tools here.
+- **routes/mcp.ts** and **features/mcp.ts**: Stateless MCP Streamable HTTP for Grok Bot. Calls `executeAgentTool` from `features/tools.ts`. MCP-only tools (IBKR) register in `features/mcp.ts`, not in the OpenAPI registry.
 - **routes/wordsmith.ts**, **summarize.ts**, **filename.ts**, _*memory*.ts_*, **bus.ts**, **auth.ts**: Agent-facing APIs.
 
 API commands run from repository root: `npm run start-api-dev`, `npm run build-api`, `npm run start-api`, and `npm run tsc`. Production image builds with `api/Dockerfile`; Prisma CLI remains a runtime dependency so container migrations can run before server start.

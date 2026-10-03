@@ -16,6 +16,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BusRouteImport } from './routes/bus'
 import { Route as FilenameRouteImport } from './routes/filename'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as SummarizeRouteImport } from './routes/summarize'
 import { Route as WordsmithRouteImport } from './routes/wordsmith'
@@ -64,6 +65,11 @@ const FilenameRoute = FilenameRouteImport.update({
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MemoryRoute = MemoryRouteImport.update({
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/bus': typeof BusRoute
   '/filename': typeof FilenameRoute
   '/health': typeof HealthRoute
+  '/mcp': typeof McpRoute
   '/memory': typeof MemoryRouteWithChildren
   '/summarize': typeof SummarizeRoute
   '/wordsmith': typeof WordsmithRoute
@@ -168,6 +175,7 @@ export interface FileRoutesByTo {
   '/bus': typeof BusRoute
   '/filename': typeof FilenameRoute
   '/health': typeof HealthRoute
+  '/mcp': typeof McpRoute
   '/memory': typeof MemoryRouteWithChildren
   '/summarize': typeof SummarizeRoute
   '/wordsmith': typeof WordsmithRoute
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/bus': typeof BusRoute
   '/filename': typeof FilenameRoute
   '/health': typeof HealthRoute
+  '/mcp': typeof McpRoute
   '/memory': typeof MemoryRouteWithChildren
   '/summarize': typeof SummarizeRoute
   '/wordsmith': typeof WordsmithRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/bus'
     | '/filename'
     | '/health'
+    | '/mcp'
     | '/memory'
     | '/summarize'
     | '/wordsmith'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/bus'
     | '/filename'
     | '/health'
+    | '/mcp'
     | '/memory'
     | '/summarize'
     | '/wordsmith'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/bus'
     | '/filename'
     | '/health'
+    | '/mcp'
     | '/memory'
     | '/summarize'
     | '/wordsmith'
@@ -287,6 +299,7 @@ export interface RootRouteChildren {
   BusRoute: typeof BusRoute
   FilenameRoute: typeof FilenameRoute
   HealthRoute: typeof HealthRoute
+  McpRoute: typeof McpRoute
   MemoryRoute: typeof MemoryRouteWithChildren
   SummarizeRoute: typeof SummarizeRoute
   WordsmithRoute: typeof WordsmithRoute
@@ -350,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/health'
       fullPath: '/health'
       preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/memory': {
@@ -483,6 +503,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusRoute: BusRoute,
   FilenameRoute: FilenameRoute,
   HealthRoute: HealthRoute,
+  McpRoute: McpRoute,
   MemoryRoute: MemoryRouteWithChildren,
   SummarizeRoute: SummarizeRoute,
   WordsmithRoute: WordsmithRoute,
