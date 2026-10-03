@@ -15,13 +15,13 @@ Monorepo for LLM-powered agents and API services built with TypeScript, TanStack
 │   ├── features/            # Reusable domain logic
 │   ├── ui/                  # Shared UI and styles
 │   └── ...                  # Database modules and tests
-├── carousell/               # Carousell automation agent (Browser MCP)
 ├── owui/
 │   └── docker-compose.yml   # Open WebUI deployment
 ├── libs/                    # Shared utilities (ai, context, utils)
+│   └── tsconfig.json        # Extends tsconfig.base.json, referenced by api
 ├── test/                    # Tests
 ├── package.json             # Root dependencies
-└── tsconfig.json            # Shared TypeScript config
+└── tsconfig.base.json       # Shared compiler options only
 ```
 
 ## Local Development
@@ -29,7 +29,6 @@ Monorepo for LLM-powered agents and API services built with TypeScript, TanStack
 ```bash
 npm install
 npm run start-api-dev      # API server (watch mode)
-npm run start-carousell-dev # Carousell agent (watch mode)
 ```
 
 ## Prisma

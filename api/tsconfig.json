@@ -1,10 +1,14 @@
 {
-  "extends": "../tsconfig.json",
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "noEmit": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "rewriteRelativeImportExtensions": false,
+    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "types": ["vite/client"]
   },
-  "include": ["**/*"]
+  "include": ["**/*"],
+  "references": [{ "path": "../libs" }]
 }

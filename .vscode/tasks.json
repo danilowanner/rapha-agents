@@ -17,10 +17,21 @@
       "script": "tsc",
       "problemMatcher": [],
       "label": "npm: tsc",
-      "detail": "tsc --noEmit",
       "icon": {
         "color": "terminal.ansiCyan",
         "id": "check-circled"
+      }
+    },
+    {
+      "type": "npm",
+      "script": "build-api",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm: build-api",
+      "detail": "Vite build API",
+      "icon": {
+        "color": "terminal.ansiCyan",
+        "id": "tools"
       }
     },
     {

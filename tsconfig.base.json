@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "noEmit": true,
     "target": "esnext",
     "module": "nodenext",
     "rewriteRelativeImportExtensions": true,
@@ -11,6 +10,5 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "jsx": "react-jsx"
-  },
-  "include": ["carousell/**/*", "libs/**/*"]
+  }
 }

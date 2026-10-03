@@ -8,7 +8,6 @@ Monorepo for LLM-powered agents and API services. Deployed on Dokploy with indep
 Key packages within the project:
 
 - api/ : TanStack Start application (api.raphastudio.com) with SSR, server routes, schedulers, and response streaming. Dockerfile at `api/Dockerfile`.
-- carousell/ : Agent that autonomously gathers data and fills forms in logged-in Chrome using Browser MCP.
 - owui/ : Open WebUI deployment config (docker-compose).
 - libs/ : Shared libraries and utilities used across different packages.
 
@@ -54,45 +53,6 @@ Key route groups:
 
 API commands run from repository root: `npm run start-api-dev`, `npm run build-api`, `npm run start-api`, and `npm run tsc`. Production image builds with `api/Dockerfile`; Prisma CLI remains a runtime dependency so container migrations can run before server start.
 
-#### carousell/
-
-Browser automation agent using Model Context Protocol (MCP):
-
-Core files:
-
-- **agent.ts**: Main agent orchestration with task handling methods (handleDanilosMessage, updateListings, checkMessages, handleTask, pruneTasks)
-- **mcp.ts**: Browser MCP client wrapper with methods like navigate(), goBack(), click(), type(), etc.
-- **tools.ts**: AI tools wrapping MCP browser actions (browserNavigate, browserClick, browserType, browserSnapshot, etc.) and database operations
-- **toolGroups.ts**: Organized tool groups (browserBasics, browserInteractions)
-- **db.ts**: LowDB-based JSON database for listings, tasks, agent logs, and reasoning logs
-- **system.ts**: System prompts for different contexts
-- **scheduler.ts**: Task scheduling system
-- **log.ts**: Logging utilities
-- **shutdown.ts**: Graceful shutdown handling
-
-Schemas (Zod validation):
-
-- **schemas/listing.ts**: Carousell listing data structure
-- **schemas/message.ts**: Message data structure
-- **schemas/task.ts**: Task data structure
-- **schemas/scheduleExecutionIn.ts**: Schedule timing configuration
-
-Utils:
-
-- **utils/callToolWithRetry.ts**: Retry logic for MCP tool calls
-- **utils/createBackoff.ts**: Exponential backoff utility
-- **utils/extractText.ts**: Text extraction from accessibility trees
-- **utils/findElement.ts**: Element finding in accessibility trees
-- **utils/getFirstToolMessage.ts**: Extract first tool message from MCP results
-- **utils/getPageJsonSnapshot.ts**: JSON snapshot extraction
-- **utils/getPageText.ts**: Page text extraction
-- **utils/getPageTitle.ts**: Page title extraction
-- **utils/getScheduleDelayMs.ts**: Schedule delay calculation
-- **utils/getToolErrorMessage.ts**: Tool error message extraction
-- **utils/getUnreadMessages.ts**: Unread message detection
-- **utils/notify.ts**: User notification via Telegram
-- **utils/scheduleSystemTask.ts**: System task scheduling
-
 #### libs/ai
 
 Core AI tooling that wraps the Vercel AI SDK's `tool()` function for agent capabilities:
@@ -131,18 +91,6 @@ Shared utilities:
 - **shorten.ts**: Text shortening utility
 - **streamToString.ts**: Stream to string conversion
 - **XmlBuilder.ts**: Simple XML builder class for readable XML generation with automatic escaping
-
-#### libs/cli
-
-Terminal UI components using Ink (React for CLI):
-
-- **App.tsx**: Main CLI application component
-- **index.tsx**: CLI entry point
-- **store.ts**: State management for CLI
-- **components/ScrollableLog.tsx**: Scrollable log display component
-- **types/LogEntry.ts**: Log entry type definitions
-- **types/LogLevel.ts**: Log level type definitions
-- **utils/colors.ts**: Color utilities for terminal output
 
 ### Library guides
 
@@ -186,7 +134,7 @@ The monorepo uses path-based deployments on Dokploy:
 
 - **API:** Dockerfile deployment (`api/Dockerfile`), watch paths: `api/**`, `libs/**`
 - **OWUI:** Compose deployment (`owui/docker-compose.yml`), watch paths: `owui/**`
-- **Shared:** Root `package.json`, `tsconfig.json` used by all services
+- **Shared:** Root `package.json` and `tsconfig.base.json` (compiler options only). `libs/tsconfig.json` and `api/tsconfig.json` both extend it. `api` references `libs`.
 
 Each service deploys independently based on watch paths.
 
