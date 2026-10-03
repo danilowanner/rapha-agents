@@ -1,12 +1,29 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
+import { antikenmuseumMaintenanceTool } from "./antikenmuseumMaintenance.ts";
 import { agentTools, executeAgentTool, type AnyTool } from "./tools.ts";
 
 const mcpToolNames = {
   "Fetch-Youtube-Transcript": "fetch_youtube_transcript",
   "Web-Research": "web_research",
 } as const satisfies { [K in keyof typeof agentTools]?: string };
+
+type McpToolEntry = { tool: AnyTool; annotations?: ToolAnnotations };
+
+const mcpTools: Record<string, McpToolEntry> = {
+  ...Object.fromEntries(
+    Object.entries(mcpToolNames).map(([openApiName, name]) => [
+      name,
+      { tool: agentTools[openApiName as keyof typeof agentTools] as AnyTool },
+    ]),
+  ),
+  antikenmuseum_maintenance: {
+    tool: antikenmuseumMaintenanceTool as AnyTool,
+    annotations: { readOnlyHint: true },
+  },
+};
 
 /**
  * Handles one stateless MCP Streamable HTTP request.
@@ -31,20 +48,20 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
 
 function createMcpServer(): McpServer {
   const server = new McpServer({ name: "rapha-api", version: "1.0.0" });
-  for (const [openApiName, mcpName] of Object.entries(mcpToolNames)) {
-    const tool = agentTools[openApiName as keyof typeof agentTools] as AnyTool;
-    registerSharedTool(server, mcpName, tool);
+  for (const [name, entry] of Object.entries(mcpTools)) {
+    registerTool(server, name, entry.tool, entry.annotations);
   }
   return server;
 }
 
-function registerSharedTool(server: McpServer, name: string, tool: AnyTool): void {
+function registerTool(server: McpServer, name: string, tool: AnyTool, annotations?: ToolAnnotations): void {
   server.registerTool(
     name,
     {
       description: tool.description,
       inputSchema: tool.inputSchema,
       outputSchema: tool.outputSchema,
+      annotations,
     },
     async (args: unknown) => {
       const value = await executeAgentTool(tool, args);

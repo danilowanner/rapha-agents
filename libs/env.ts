@@ -53,4 +53,10 @@ export const env = {
     const error = "DATABASE_URL is required";
     return z.string({ error }).min(1, { error }).parse(process.env.DATABASE_URL);
   },
+  get apiSshKeyPath() {
+    return z.string().optional().parse(process.env.API_SSH_KEY_PATH);
+  },
+  get apiSshKnownHosts() {
+    return z.string().optional().parse(process.env.API_SSH_KNOWN_HOSTS);
+  },
 };
