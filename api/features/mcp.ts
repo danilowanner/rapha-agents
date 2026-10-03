@@ -3,6 +3,7 @@ import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
 import { antikenmuseumMaintenanceTool } from "./antikenmuseumMaintenance.ts";
+import { getHoldingsTool } from "./ibkr/getHoldings.ts";
 import { agentTools, executeAgentTool, type AnyTool } from "./tools.ts";
 
 const mcpToolNames = {
@@ -19,6 +20,10 @@ const mcpTools: Record<string, McpToolEntry> = {
       { tool: agentTools[openApiName as keyof typeof agentTools] as AnyTool },
     ]),
   ),
+  ibkr_get_holdings: {
+    tool: getHoldingsTool as AnyTool,
+    annotations: { readOnlyHint: true },
+  },
   antikenmuseum_maintenance: {
     tool: antikenmuseumMaintenanceTool as AnyTool,
     annotations: { readOnlyHint: true },

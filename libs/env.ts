@@ -53,6 +53,14 @@ export const env = {
     const error = "DATABASE_URL is required";
     return z.string({ error }).min(1, { error }).parse(process.env.DATABASE_URL);
   },
+  get ibkrFlexToken() {
+    const value = z.string().optional().parse(process.env.IBKR_FLEX_TOKEN)?.trim();
+    return value ? value : undefined;
+  },
+  get ibkrFlexQueryId() {
+    const value = z.string().optional().parse(process.env.IBKR_FLEX_QUERY_ID)?.trim();
+    return value ? value : undefined;
+  },
   get apiSshKeyPath() {
     return z.string().optional().parse(process.env.API_SSH_KEY_PATH);
   },
