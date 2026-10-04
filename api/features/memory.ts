@@ -1,26 +1,22 @@
 import { randomUUID } from "node:crypto";
 
+import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
 import { formatDateTime } from "../../libs/utils/formatDateTime.ts";
 import { formatRelativeTime } from "../../libs/utils/formatRelativeTime.ts";
 import { shorten } from "../../libs/utils/shorten.ts";
 import { XmlBuilder } from "../../libs/utils/XmlBuilder.ts";
-import {
-  createMemoryEntry as dbCreateMemoryEntry,
-  getMemoryEntries,
-  updateCondensed,
-  updateTopic,
-} from "../db/memoryEntry.ts";
+import { createMemoryEntry as dbCreateMemoryEntry, getMemoryEntries, updateCompaction } from "../db/memoryEntry.ts";
 import { getOrCreateUser } from "../db/user.ts";
 
-import { getErrorMessage } from "../../libs/utils/getErrorMessage.ts";
-import { compactMessage, TOPIC_MAX_LENGTH } from "./compaction.ts";
+import { compactExchange, TOPIC_MAX_LENGTH } from "./compaction.ts";
 
-const RECENT_ENTRIES_COUNT = 10;
 const ALL_ENTRIES_COUNT = 100;
+const FULL_ENTRIES_COUNT = Math.floor((ALL_ENTRIES_COUNT * 10) / 100);
+const CONDENSED_ENTRIES_COUNT = Math.floor((ALL_ENTRIES_COUNT * 40) / 100);
 const AGENT_ID = "main";
 
 /**
- * Adds a new memory entry for a user. Triggers async condensation.
+ * Adds a new memory entry for a user. Triggers async compaction of the exchange.
  * When chatId is omitted (e.g. wordsmith), a UUID is generated per call so the entry is not tied to a conversation.
  */
 export function addMemoryEntry(
@@ -38,12 +34,8 @@ export function addMemoryEntry(
     agentMessage: entry.agentMessage,
   })
     .then((created) => {
-      compactMessage(created.agentMessage, "assistant")
-        .then((compacted) =>
-          compacted.condensed
-            ? updateCondensed(created.id, compacted.condensed, compacted.topic)
-            : updateTopic(created.id, compacted.topic),
-        )
+      compactExchange(created.userMessage, created.agentMessage)
+        .then((compacted) => updateCompaction(created.id, compacted.topic, compacted.condensed))
         .catch((err) => {
           console.warn(`[MEMORY] Compaction failed:`, getErrorMessage(err));
         });
@@ -57,6 +49,7 @@ export function addMemoryEntry(
 /**
  * Gets memory as XML block for injection into system prompt.
  * excludeChatId omits entries from that conversation (avoids duplicating current chat history).
+ * Newest 10% of the cap include original messages. Next entries up to 40% include a condensed agent reply. The rest keep the topic only.
  */
 export async function getMemoryAsXml(userId: string, options?: { excludeChatId?: string }): Promise<string> {
   const user = await getOrCreateUser(userId);
@@ -67,27 +60,30 @@ export async function getMemoryAsXml(userId: string, options?: { excludeChatId?:
   if (!user.context && entries.length === 0) return "";
 
   const now = new Date();
-
   const xml = new XmlBuilder("conversationHistory");
   if (user.context) xml.child("userContext", user.context);
   xml.child("now", `Current date and time: ${formatDateTime()}`);
 
-  const recentXml = xml.child("recent");
-  const recentStart = Math.max(entries.length - RECENT_ENTRIES_COUNT, 0);
+  const fullStart = Math.max(entries.length - FULL_ENTRIES_COUNT, 0);
+  const condensedStart = Math.max(entries.length - CONDENSED_ENTRIES_COUNT, 0);
 
   entries.reverse().forEach((entry, index) => {
+    if (!entry.topic) return;
     const ago = formatRelativeTime(entry.createdAt, now);
     const time = formatDateTime(entry.createdAt);
-    const exchangeXml = recentXml.child("exchange", undefined, { ago, time });
+    const exchangeXml = xml.child("exchange", undefined, { ago, time });
     exchangeXml.child("topic", entry.topic);
-    if (index >= recentStart) {
+    if (index >= fullStart) {
       exchangeXml.child("user", entry.userMessage);
-      exchangeXml.child("agent", entry.condensedAgentMessage ?? entry.agentMessage);
+      exchangeXml.child("agent", entry.agentMessage);
+      return;
     }
+    if (index >= condensedStart && entry.condensedAgentMessage)
+      exchangeXml.child("agent", entry.condensedAgentMessage, { condensed: "true" });
   });
 
   const result = xml.build();
-  const condensedCount = entries.filter((e) => e.condensedAgentMessage).length;
+  const condensedCount = entries.filter((entry) => entry.condensedAgentMessage).length;
   console.log(`[MEMORY] ${userId}: ${result.length} chars, ${condensedCount}/${entries.length} condensed/entries`);
   return result;
 }

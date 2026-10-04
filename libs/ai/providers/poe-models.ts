@@ -13,9 +13,10 @@ export type PoeModelId =
   | "claude-opus-4.7"
   | "claude-opus-4.6"
   | "claude-sonnet-4.6"
+  | "claude-sonnet-5.5"
   | "claude-haiku-4.5"
   | "grok-4"
-  | "deepseek-v4-flash-e"
+  | "deepseek-v4.1-flash"
   | "kimi-k2.6";
 
 export type PoeOptions = {

@@ -54,7 +54,7 @@ export async function getMemoryTopics(
   userId: string,
   agentId: string,
   options?: { limit?: number },
-): Promise<{ id: number; topic: string; createdAt: Date }[]> {
+): Promise<{ id: number; topic: string | null; createdAt: Date }[]> {
   const entries = await prisma.memoryEntry.findMany({
     where: { userId, agentId },
     orderBy: { createdAt: "desc" },
@@ -68,24 +68,17 @@ export async function getMemoryEntryById(id: number): Promise<MemoryEntry | null
   return prisma.memoryEntry.findUnique({ where: { id } });
 }
 
-export async function updateCondensedAgentMessage(id: number, condensedAgentMessage: string): Promise<void> {
+/**
+ * Stores compaction output. Null clears a previous topic or condensed reply.
+ */
+export async function updateCompaction(
+  id: number,
+  topic: string | null,
+  condensedAgentMessage: string | null,
+): Promise<void> {
   await prisma.memoryEntry.update({
     where: { id },
-    data: { condensedAgentMessage },
-  });
-}
-
-export async function updateCondensed(id: number, condensedAgentMessage: string, topic: string): Promise<void> {
-  await prisma.memoryEntry.update({
-    where: { id },
-    data: { condensedAgentMessage, topic },
-  });
-}
-
-export async function updateTopic(id: number, topic: string): Promise<void> {
-  await prisma.memoryEntry.update({
-    where: { id },
-    data: { topic },
+    data: { topic, condensedAgentMessage },
   });
 }
 

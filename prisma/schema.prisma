@@ -35,7 +35,7 @@ model MemoryEntry {
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   agentId               String
   chatId                String
-  topic                 String
+  topic                 String?
   userMessage           String   @db.Text
   agentMessage          String   @db.Text
   condensedAgentMessage String?  @db.Text

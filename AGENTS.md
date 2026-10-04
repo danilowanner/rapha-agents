@@ -65,7 +65,6 @@ Core AI tooling that wraps the Vercel AI SDK's `tool()` function for agent capab
 - **sendMessageTool.ts**: Tool for sending messages to users via Telegram
 - **sendResultTool.ts**: Tool for sending results with optional clipboard content via Telegram
 - **providers/poe-chat.ts**: Poe OpenAI Chat Completions adapter (`/v1/chat/completions`)
-- **providers/poe-messages.ts**: Poe Anthropic Messages adapter (`/v1/messages`)
 - **providers/poe-models.ts**: Shared Poe model IDs and options
 - **functions/extractFile.ts**: AI-based file metadata extraction using structured output
 
@@ -98,16 +97,14 @@ Shared utilities:
 
 #### Poe provider usage
 
-Two adapters over Poe's OpenAI-compatible API. Prefer **chat** for multi-provider tool loops; use **messages** for Claude-specific features (thinking, prompt cache).
+One adapter over Poe's OpenAI-compatible Chat Completions API.
 
 ```typescript
 import { generateText, Output } from "ai";
 import { createPoeChat } from "../providers/poe-chat.ts";
-import { createPoeMessages } from "../providers/poe-messages.ts";
 import { env } from "../../env.ts";
 
 const poe = createPoeChat({ apiKey: env.poeApiKey });
-const poeMessages = createPoeMessages({ apiKey: env.poeApiKey });
 
 // Plain text / tools (chat completions)
 const { text } = await generateText({

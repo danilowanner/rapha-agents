@@ -19,13 +19,16 @@ export function createPoeChat(options: PoeOptions): PoeChat {
     name: "poe",
     baseURL: POE_BASE_URL,
     apiKey: options.apiKey,
-    transformRequestBody: (args) => ({
-      ...args,
-      extra_body: {
-        ...(isRecord(args.extra_body) ? args.extra_body : {}),
-        web_search: false,
-      },
-    }),
+    transformRequestBody: (args) => {
+      const request = claudeChatBody(args);
+      return {
+        ...request,
+        extra_body: {
+          ...(isRecord(request.extra_body) ? request.extra_body : {}),
+          web_search: false,
+        },
+      };
+    },
   });
 
   const poe: PoeChat = (modelId) => provider.chatModel(modelId);
@@ -36,3 +39,11 @@ export function createPoeChat(options: PoeOptions): PoeChat {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
+
+/** Poe's Claude chat route rejects OpenAI `response_format`. */
+const claudeChatBody = (args: Record<string, unknown>): Record<string, unknown> => {
+  if (typeof args.model !== "string" || !args.model.startsWith("claude-")) return args;
+  const { response_format, ...rest } = args;
+  void response_format;
+  return rest;
+};
