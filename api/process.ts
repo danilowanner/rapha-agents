@@ -1,6 +1,8 @@
+import { Bot } from "grammy";
+
 import { env } from "../libs/env.ts";
 import { telegramBot } from "../libs/utils/telegram.ts";
-import { startFamilyChatBot, stopFamilyChatBot } from "./features/familyChatBot.ts";
+import { startFamilyChatBot, stopFamilyChatBot } from "./features/chatBot/familyChatBot.ts";
 import { stopTelegramResponseLinks } from "./features/responses/sendTelegramResponseLink.ts";
 import { startScheduler, stopScheduler } from "./features/scheduler.ts";
 
@@ -12,8 +14,11 @@ export function startApiProcess(): void {
   if (started) return;
   started = true;
 
-  if (env.telegramFamilyBotToken) startFamilyChatBot(env.telegramFamilyBotToken);
-  else console.warn("Warning: Family Telegram bot not configured, skipping start");
+  if (env.telegramFamilyBotToken) startFamilyChatBot(new Bot(env.telegramFamilyBotToken));
+  else {
+    console.warn("Warning: Family Telegram bot not configured, using main bot");
+    startFamilyChatBot(telegramBot);
+  }
   startScheduler();
 }
 
