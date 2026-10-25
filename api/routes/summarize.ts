@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { streamText, type UserContent } from "ai";
+import { createGateway, streamText, type UserContent } from "ai";
 import z from "zod";
 
 import { createFile, createFileToolName, getMarker } from "../../libs/ai/createFileTool.ts";
 import { fetchWebsite } from "../../libs/ai/fetchWebsiteTool.ts";
 import { fetchYoutubeTranscript } from "../../libs/ai/fetchYoutubeTranscriptTool.ts";
-import { createPoeChat } from "../../libs/ai/providers/poe-chat.ts";
 import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
 import { stopOnDoneOrMaxSteps } from "../../libs/ai/stopConditions.ts";
+import { webResearch } from "../../libs/ai/webResearchTool.ts";
 import { getUserChatId } from "../../libs/context/getUserChatId.ts";
 import { env } from "../../libs/env.ts";
 import { createResponseStream } from "../../libs/utils/createResponseStream.ts";
@@ -23,12 +23,14 @@ import { addResponse, createResponseId } from "../features/responses/state.ts";
 const MAX_PDF_PAGES = 20;
 const fetchYoutubeTranscriptToolName = "fetchYoutubeTranscript";
 const fetchWebsiteToolName = "fetchWebsite";
-const reasoningToolName = "addAReasoningStep";
+const webSearchToolName = "webSearch";
+const reasoningToolName = "addReasoningStep";
+const maxSteps = 10;
 const inputSchema = z.object({
   text: z.string().optional(),
   user: z.string().min(1),
 });
-const poe = createPoeChat({ apiKey: env.poeApiKey });
+const gateway = createGateway({ apiKey: env.vercelApiKey });
 
 type Response = {
   responseId?: string;
@@ -77,7 +79,7 @@ export const Route = createFileRoute("/summarize")({
           const userMessageContent = await buildUserMessageContent(text, file);
 
           const result = streamText({
-            model: poe("claude-sonnet-4.6"),
+            model: gateway("deepseek/deepseek-v4.1-flash-1017-fast"),
             messages: [{ role: "user" as const, content: userMessageContent }],
             system: getSystemPrompt(),
             tools: {
@@ -90,12 +92,15 @@ export const Route = createFileRoute("/summarize")({
               [fetchWebsiteToolName]: fetchWebsite(async ({ url, title }) => {
                 console.log(`[FETCHED] ${url} - ${title}`);
               }),
+              [webSearchToolName]: webResearch(async ({ query }) => {
+                console.log(`[SEARCH] ${query}`);
+              }),
               [createFileToolName]: createFile((input) => {
                 console.log(`[FILE] ${input.name}${input.description ? ` - ${input.description}` : ""}`);
               }),
             },
             toolChoice: "auto",
-            stopWhen: stopOnDoneOrMaxSteps(6),
+            stopWhen: stopOnDoneOrMaxSteps(maxSteps),
             onStepFinish: ({ content }) => {
               const toolErrors = content.filter((part) => part.type === "tool-error");
               if (toolErrors.length > 0)
@@ -130,6 +135,8 @@ export const Route = createFileRoute("/summarize")({
                       return `✅ Finished reasoning about 👉 *${chunk.input.title}*`;
                     case fetchWebsiteToolName:
                       return `🌐 Reading the website ${chunk.input.url}`;
+                    case webSearchToolName:
+                      return `🔍 Searching the web: ${chunk.input.query}`;
                     case fetchYoutubeTranscriptToolName:
                       return `▶️ Fetching transcript from YouTube video ${chunk.input.url}`;
                     case createFileToolName:
@@ -144,6 +151,8 @@ export const Route = createFileRoute("/summarize")({
                     case fetchWebsiteToolName:
                       const pageTitle: string = chunk.output.title ? `"${chunk.output.title}"` : "";
                       return `✅ Fetched page ${pageTitle}`;
+                    case webSearchToolName:
+                      return `✅ Searched the web, ${chunk.output.results.length} results`;
                     case fetchYoutubeTranscriptToolName:
                       const ytTitle: string = chunk.output.title ? `"${chunk.output.title}"` : "";
                       return `✅ Fetched transcript ${ytTitle}`;
@@ -211,6 +220,7 @@ Your task is to create clear, concise, and accurate summaries of the provided co
 - Plain text to summarize
 - A URL to fetch and summarize (use the ${fetchWebsiteToolName} tool when you see a URL in the text)
 - Files (PDFs, images) to analyze and summarize
+Never use ${fetchWebsiteToolName} for YouTube URLs. YouTube pages do not return any video metadata; use ${fetchYoutubeTranscriptToolName}.
 
 For each request:
 1. Retrieve: If the text contains a URL, use the ${fetchWebsiteToolName} tool to retrieve the content first
@@ -226,17 +236,22 @@ For each request:
 4) Confidence and credibility
 5) If available: Source and/or Link (optional)
 </output-format>
+<web-search tool="${webSearchToolName}">
+Optional. Use ${webSearchToolName} only when a claim, name, date, or figure needs a check for an accurate summary. Skip it when the source is already sufficient. Use results to verify or correct a claim, not to add background the source never raised.
+</web-search>
 <reasoning tool="${reasoningToolName}">
 Use ${reasoningToolName} BEFORE other tools to outline approach, flag claims needing scrutiny, and plan summary structure.
 Use again when content is ambiguous, contradictory, or credibility is unclear. NEVER duplicate prior reasoning.
 </reasoning>
 <create-file tool="${createFileToolName}">
-You MUST use the ${createFileToolName} tool to save your summary as a file.
-Immediately after writing, call ${createFileToolName} with:
+Emit the full summary as normal assistant text first. Never invoke ${createFileToolName} before that text is already in the message.
+A summary placed inside ${reasoningToolName} or any other tool call does not count as the written summary.
+done=true ends the loop, so a premature call saves an empty file.
+Immediately after the summary text, call ${createFileToolName} with:
   - name: A descriptive, sentence-cased filename based on the content (e.g., "Climate report summary.md")
   - description: A brief one-line description of the file contents
-  - startMarker: The exact first 50-100 characters of your summary content
-  - done: true (since this completes the task)
+  - startMarker: The exact first 50-100 characters of the summary text you just wrote
+  - done: true
 </create-file>
 <summary_guidelines>
 Your summaries should:
