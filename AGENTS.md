@@ -51,7 +51,8 @@ Key route groups:
 - **routes/tools/**: Tool OpenAPI schema and execution endpoints with CORS. OWUI tool server. Do not add MCP-only tools here.
 - **routes/mcp.ts** and **features/mcp.ts**: Stateless MCP Streamable HTTP for Grok Bot. Calls `executeAgentTool` from `features/tools.ts`. MCP-only tools register in `features/mcp.ts`, not in the OpenAPI registry.
 - **features/ibkr/getHoldings.ts**: Read-only Flex holdings for `ibkr_get_holdings`. No order drafts.
-- **routes/wordsmith.ts**, **summarize.ts**, **filename.ts**, _*memory*.ts_*, **bus.ts**, **auth.ts**: Agent-facing APIs.
+- **routes/wordsmith.ts**, **summarize.ts**, **filename.ts**, _*memory*.ts_*, **bus.ts**, **auth.ts**: Agent-facing APIs. `/filename` and `/summarize` call Vercel AI Gateway (`deepseek/deepseek-v4.1-flash-1017-fast`).
+- **features/chatBot/familyChatBot.ts**: Family Telegram bot. Replies and the address judge use Vercel AI Gateway (`deepseek/deepseek-v4.1-flash-1017`).
 
 API commands run from repository root: `npm run start-api-dev`, `npm run build-api`, `npm run start-api`, and `npm run tsc`. Production image builds with `api/Dockerfile`; Prisma CLI remains a runtime dependency so container migrations can run before server start.
 

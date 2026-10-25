@@ -11,6 +11,12 @@ export const env = {
       .min(1, "POE_API_KEY is required")
       .parse(process.env.POE_API_KEY);
   },
+  get vercelApiKey() {
+    return z
+      .string({ error: "VERCEL_API_KEY is required" })
+      .min(1, "VERCEL_API_KEY is required")
+      .parse(process.env.VERCEL_API_KEY);
+  },
   get telegramBotToken() {
     const error = "TELEGRAM_BOT_TOKEN is required";
     return z.string({ error }).min(1, { error }).parse(process.env.TELEGRAM_BOT_TOKEN);

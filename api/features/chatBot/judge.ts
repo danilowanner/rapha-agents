@@ -1,13 +1,12 @@
-import { extractJsonMiddleware, generateText, Output, wrapLanguageModel } from "ai";
+import { createGateway, extractJsonMiddleware, generateText, Output, wrapLanguageModel } from "ai";
 import z from "zod";
 
-import { createPoeChat } from "../../../libs/ai/providers/poe-chat.ts";
 import { env } from "../../../libs/env.ts";
 import { formatRecentMessages, type RecentMessage } from "./recentMessages.ts";
 
-const poe = createPoeChat({ apiKey: env.poeApiKey });
+const gateway = createGateway({ apiKey: env.vercelApiKey });
 const judgeModel = wrapLanguageModel({
-  model: poe("deepseek-v4.1-flash"),
+  model: gateway("deepseek/deepseek-v4.1-flash-1017"),
   middleware: extractJsonMiddleware(),
 });
 

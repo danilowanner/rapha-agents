@@ -1,7 +1,6 @@
-import { generateText, stepCountIs, type UserContent } from "ai";
+import { createGateway, generateText, stepCountIs, type UserContent } from "ai";
 import { type Bot, type Context } from "grammy";
 
-import { createPoeChat } from "../../../libs/ai/providers/poe-chat.ts";
 import { webResearch } from "../../../libs/ai/webResearchTool.ts";
 import { env } from "../../../libs/env.ts";
 import { markdownToTelegramHtml } from "../../../libs/utils/markdownToTelegramHtml.ts";
@@ -9,7 +8,7 @@ import { addMemoryEntry, getMemoryAsXml } from "../memory.ts";
 import { shouldAddressBot } from "./judge.ts";
 import { addBotReply, addRecentMessage, formatRecentMessages, type RecentMessage } from "./recentMessages.ts";
 
-const poe = createPoeChat({ apiKey: env.poeApiKey });
+const gateway = createGateway({ apiKey: env.vercelApiKey });
 const allowedChatIds = new Set(env.telegramFamilyBotAllowedChatIds);
 let botUsernamePromise: Promise<string | undefined> | null = null;
 let familyTelegramBot: Bot | null = null;
@@ -239,7 +238,7 @@ const replyToUserContent = async (
   try {
     const userName = getSenderName(ctx);
     const { text } = await generateText({
-      model: poe("deepseek-v4.1-flash"),
+      model: gateway("deepseek/deepseek-v4.1-flash-1017"),
       system: await createSystemPrompt(userName, priorMessages),
       messages: [{ role: "user", content: userContent }],
       tools: {

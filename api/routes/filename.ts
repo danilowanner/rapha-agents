@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { generateText, type UserContent } from "ai";
+import { createGateway, generateText, type UserContent } from "ai";
 
-import { createPoeChat } from "../../libs/ai/providers/poe-chat.ts";
-import { reasoningTool } from "../../libs/ai/reasoningTool.ts";
 import { stopOnDoneOrMaxSteps } from "../../libs/ai/stopConditions.ts";
 import { submitFilename, submitFilenameToolName } from "../../libs/ai/submitFilenameTool.ts";
 import { env } from "../../libs/env.ts";
@@ -11,8 +9,9 @@ import { fileToText } from "../../libs/utils/fileToText.ts";
 import { isDefined } from "../../libs/utils/isDefined.ts";
 import { authMiddleware } from "../authHeaderMiddleware.ts";
 
-const poe = createPoeChat({ apiKey: env.poeApiKey });
-const reasoningToolName = "addAReasoningStep";
+const gateway = createGateway({ apiKey: env.vercelApiKey });
+const pdfPageLimit = 3;
+const pageWidthPx = 800;
 
 export const Route = createFileRoute("/filename")({
   server: {
@@ -41,8 +40,13 @@ export const Route = createFileRoute("/filename")({
           }
 
           const extension = file.name.split(".").pop() || "pdf";
-          const extractedText = file.type === "application/pdf" ? await fileToText(file).catch(() => null) : null;
-          const imageBuffers = await fileToImageBuffers(file, { maxPages: 5 });
+          const pdf = file.type === "application/pdf";
+          const extractedText = pdf ? await fileToText(file).catch(() => null) : null;
+          const imageBuffers = await fileToImageBuffers(file, {
+            maxPages: pdfPageLimit,
+            desiredWidth: pageWidthPx,
+            format: "jpeg",
+          });
           const content: UserContent = [{ type: "text", text: "Analyze this document and generate a filename:" }];
 
           if (extractedText) {
@@ -55,7 +59,7 @@ export const Route = createFileRoute("/filename")({
           content.push(...imageBuffers.map((buffer) => ({ type: "image" as const, image: buffer })));
 
           const { steps } = await generateText({
-            model: poe("gpt-5.4-mini"),
+            model: gateway("deepseek/deepseek-v4.1-flash-1017-fast"),
             system: systemPrompt(userPrompt),
             messages: [
               {
@@ -64,12 +68,7 @@ export const Route = createFileRoute("/filename")({
               },
             ],
             tools: {
-              [reasoningToolName]: reasoningTool(async ({ title, details }) => {
-                console.log(`[FILENAME REASONING] ${title}\n${details}`);
-              }),
-              [submitFilenameToolName]: submitFilename(({ filename }) => {
-                console.log(`[FILENAME SUBMIT] ${filename}`);
-              }),
+              [submitFilenameToolName]: submitFilename(() => {}),
             },
             stopWhen: stopOnDoneOrMaxSteps(6),
           });
@@ -111,8 +110,7 @@ You are a filename generator. Analyze the provided file contents and extract:
 </role>
 
 <workflow>
-1. Use ${reasoningToolName} to analyze the document and decide on title and date
-2. Call ${submitFilenameToolName} with the final filename
+Call ${submitFilenameToolName} with the final filename.
 Do NOT output the filename as plain text. The filename must be submitted via ${submitFilenameToolName} only.
 </workflow>
 

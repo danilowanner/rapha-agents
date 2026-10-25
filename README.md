@@ -65,7 +65,7 @@ Schema: `prisma/schema.prisma`. Config: `prisma.config.ts` (uses `DATABASE_URL`)
 
 **Watch Paths:** `api/**`, `libs/**`, `prisma/**`
 
-**Env:** `PORT`, `BASE_URL`, `DATABASE_URL`, `POE_API_KEY`, `TELEGRAM_BOT_TOKEN`, `API_KEY`, `BRAVE_SEARCH_API_KEY`. Optional: `YOUTUBE_COOKIE`, `OXYLABS_*`, `IBKR_FLEX_TOKEN`, `IBKR_FLEX_QUERY_ID`.
+**Env:** `PORT`, `BASE_URL`, `DATABASE_URL`, `POE_API_KEY`, `VERCEL_API_KEY`, `TELEGRAM_BOT_TOKEN`, `API_KEY`, `BRAVE_SEARCH_API_KEY`. Optional: `YOUTUBE_COOKIE`, `OXYLABS_*`, `IBKR_FLEX_TOKEN`, `IBKR_FLEX_QUERY_ID`.
 **Domain:** api.raphastudio.com
 
 ### OWUI
